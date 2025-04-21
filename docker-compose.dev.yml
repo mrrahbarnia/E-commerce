@@ -10,6 +10,7 @@ services:
       - ./src:/app/src/
       - ./logs:/app/logs/
       - ./alembic:/app/alembic/
+      - ./alembic.ini:/app/alembic.ini
     env_file:
       - ./.env
     networks:

@@ -1,7 +1,8 @@
 from typing import AsyncGenerator
+from datetime import datetime
 
 import redis.asyncio as redis
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, types as sql_types
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -12,13 +13,14 @@ from sqlalchemy.ext.asyncio import (
 
 from src.config import settings
 from src.constants import DB_NAMING_CONVENTION
+from src.auth.domain import types as auth_types
 
 async_engine: AsyncEngine = create_async_engine(str(settings.POSTGRES_URL))
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
     metadata = MetaData(naming_convention=DB_NAMING_CONVENTION)
-    # type_annotation_map = {}
+    type_annotation_map = {datetime: sql_types.TIMESTAMP(timezone=True)}
 
 
 async def session_maker() -> async_sessionmaker[AsyncSession]:

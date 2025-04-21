@@ -4,6 +4,7 @@ from typing import NewType, Literal
 from uuid import UUID
 
 UserId = NewType("UserId", UUID)
+UserIdentityId = NewType("UserIdentityId", int)
 ProductId = NewType("ProductId", UUID)
 CategoryId = NewType("CategoryId", UUID)
 SellerId = NewType("SellerId", int)
@@ -21,16 +22,17 @@ PermissionId = NewType("PermissionId", int)
 class User:
     id: UserId
     role: Literal["Customer", "Seller", "Admin"]
-    email: str
-    phone_number: str
     hashed_password: str
+    registered_at: datetime
 
 
 @dataclass
-class Profile:
+class UserIdentity:
+    id: UserIdentityId
     user_id: UserId
-    first_name: str
-    last_name: str
+    identity_type: str  # email, phone_number, etc
+    identity_value: str
+    full_name: str
     avatar: str
 
 
