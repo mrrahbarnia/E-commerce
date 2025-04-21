@@ -11,8 +11,10 @@ SellerStaffId = NewType("SellerStaffId", int)
 RoleId = NewType("RoleId", int)
 PermissionId = NewType("PermissionId", int)
 
-# ======================== User management bounded context ======================== #
-# Seller different roles: products_manager, inventory_manager, orders_manager,
+# ============= Two different bounded context ============= #
+# If i have a user named MohammadReza
+# AUTH only cares: “Can MohammadReza access the system?”
+# SELLERS cares: “Which seller does MohammadReza work for, and what can he do for that seller?”
 
 
 @dataclass

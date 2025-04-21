@@ -9,7 +9,7 @@ services:
     volumes:
       - ./src:/app/src/
       - ./logs:/app/logs/
-      # - ./alembic:/alembic/
+      - ./alembic:/app/alembic/
     env_file:
       - ./.env
     networks:
