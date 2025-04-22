@@ -33,6 +33,7 @@ class UserIdentity:
     identity_type: str  # email, phone_number, etc
     identity_value: str
     full_name: str
+    username: str
     avatar: str
 
 

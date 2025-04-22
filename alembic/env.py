@@ -8,7 +8,7 @@ from alembic import context
 
 from src.config import settings
 from src.database import Base
-from src.auth.domain import models  # noqa
+from src.auth.v1 import models  # noqa
 
 
 POSTGRES_URL = settings.POSTGRES_URL

@@ -13,14 +13,18 @@ from sqlalchemy.ext.asyncio import (
 
 from src.config import settings
 from src.constants import DB_NAMING_CONVENTION
-from src.auth.domain import types as auth_types
+from src.auth.v1 import types as auth_types
 
 async_engine: AsyncEngine = create_async_engine(str(settings.POSTGRES_URL))
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
     metadata = MetaData(naming_convention=DB_NAMING_CONVENTION)
-    type_annotation_map = {datetime: sql_types.TIMESTAMP(timezone=True)}
+    type_annotation_map = {
+        datetime: sql_types.TIMESTAMP(timezone=True),
+        auth_types.UserId: sql_types.UUID,
+        auth_types.UserIdentityId: sql_types.INTEGER,
+    }
 
 
 async def session_maker() -> async_sessionmaker[AsyncSession]:

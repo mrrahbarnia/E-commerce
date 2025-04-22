@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.config import LogConfig, app_configs
+from src.auth.v1 import router as auth_router_v1
 
 logger = logging.getLogger("root")
 
@@ -19,7 +20,4 @@ async def lifespan(_application: FastAPI) -> AsyncGenerator:
 
 app = FastAPI(**app_configs, lifespan=lifespan)
 
-
-@app.get("/hello-world")
-async def hello_world() -> str:
-    return "Hello world..."
+app.include_router(router=auth_router_v1.router, prefix="/v1/auth", tags=["auth"])
