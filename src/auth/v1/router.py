@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.database import session_maker, redis_conn
 from src.auth.v1 import schemas
-from src.auth.v1 import handlers
+from src.auth.v1 import services
 from src.auth.v1.config import auth_config
 
 
@@ -65,7 +65,7 @@ async def register(
     - **username** must be at least 200 chars.
     - **full_name** must be at least 200 chars.
     """
-    await handlers.register_handler(session_maker, redis, payload)
+    await services.register_handler(session_maker, redis, payload)
     return {"username": payload.username, "identity_value": payload.identity_value}
 
 
@@ -101,7 +101,54 @@ async def register(
 async def activate_account(
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     redis: Annotated[Redis, Depends(redis_conn)],
-    payload: schemas.ActivateAccount,
+    payload: schemas.ActivateAccountIn,
 ) -> dict:
-    await handlers.activate_account(session_maker, redis, payload.verification_code)
+    await services.activate_account_handler(
+        session_maker, redis, payload.verification_code
+    )
     return {"detail": "Verified successfully."}
+
+
+@router.post(
+    "/verification-code/resend/",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "content": {
+                "application/json": {"example": {"detail": "Resent successfully."}}
+            }
+        },
+        404: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "There is no account with the provided info."}
+                }
+            }
+        },
+        401: {
+            "description": "The user has been already activated.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Account has already been activated."}
+                }
+            },
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
+async def resend_verification_code(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+    redis: Annotated[Redis, Depends(redis_conn)],
+    payload: schemas.ResendVerificationCodeIn,
+) -> dict:
+    """
+    - **identity value** must be in correct format.
+    """
+    await services.resend_verification_code_handler(session_maker, redis, payload)
+    return {"detail": "Resent successfully."}

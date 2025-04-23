@@ -54,6 +54,15 @@ async def create_user(db_session: AsyncSession, hashed_password: str) -> types.U
         raise CheckDbConnection
 
 
+# async def update_user_is_active_field_by_identity_value(
+#     db_session: AsyncSession, identity_value: str
+# ) -> types.UserId | None:
+#     smtm = sa.update(models.User.user_id).where(
+#         models.UserIdentity.identity_value == email
+#     )
+#     return await db_session.scalar(smtm)
+
+
 async def create_user_identity(
     db_session: AsyncSession,
     user_id: types.UserId,
@@ -78,6 +87,22 @@ async def create_user_identity(
     except Exception as ex:
         logger.error(ex)
         raise CheckDbConnection
+
+
+async def check_user_existence_and_account_activation_status(
+    db_session: AsyncSession, identity_type: types.IdentityType, identity_value: Any
+) -> bool | None:
+    smtm = (
+        sa.select(models.User.is_active)
+        .join(models.UserIdentity, models.User.id == models.UserIdentity.user_id)
+        .where(
+            sa.and_(
+                models.UserIdentity.identity_value == identity_value,
+                models.UserIdentity.identity_type == identity_type.value,
+            )
+        )
+    )
+    return await db_session.scalar(smtm)
 
 
 async def activate_user_account(
