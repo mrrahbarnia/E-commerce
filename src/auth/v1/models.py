@@ -26,14 +26,6 @@ class UserIdentity(Base):
             "identity_value",
             name="identity_type_identity_value_unique",
         ),
-        sa.CheckConstraint(
-            """
-            (identity_type = 'EMAIL' AND identity_value ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
-            OR
-            (identity_type = 'PHONE_NUMBER' AND identity_value ~* '[0-9]{11}')
-            """,
-            name="check_identity_type_identity_value",
-        ),
     )
     id: so.Mapped[types.UserIdentityId] = so.mapped_column(autoincrement=True)
     identity_type: so.Mapped[types.IdentityType] = so.mapped_column(
@@ -44,5 +36,5 @@ class UserIdentity(Base):
     username: so.Mapped[str] = so.mapped_column(sa.String(200))
     avatar: so.Mapped[str] = so.mapped_column(sa.String(200))
     user_id: so.Mapped[types.UserId] = so.mapped_column(
-        sa.ForeignKey(f"{User.__tablename__}.id", ondelete="CASCADE"), index=True
+        sa.ForeignKey(f"{User.__tablename__}.id", ondelete="CASCADE"), unique=True
     )

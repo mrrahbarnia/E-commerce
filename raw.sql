@@ -1,0 +1,9 @@
+-- Added check constraint on user_identities table
+
+ALTER TABLE user_identities
+ADD CONSTRAINT check_identity_type_identity_value
+CHECK (
+  (identity_type = 'EMAIL' AND identity_value ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.[A-Za-z]{2,}$')
+  OR
+  (identity_type = 'PHONE_NUMBER' AND identity_value ~* '^[0-9]{11}$')
+);
