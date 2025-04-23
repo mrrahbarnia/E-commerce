@@ -1,6 +1,7 @@
 import logging
 from typing import assert_never
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.common.exceptions import CheckDbConnection
@@ -10,30 +11,29 @@ from src.auth.v1 import types
 from src.auth.v1 import repositories
 from src.auth.v1 import exceptions
 from src.auth.v1.utils import hash_password
+from src.auth.v1.config import auth_config
 
 logger = logging.getLogger("auth")
 
 
 async def register_handler(
-    session_maker: async_sessionmaker[AsyncSession], payload: schemas.RegisterIn
+    session_maker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    payload: schemas.RegisterIn,
 ) -> None:
     try:
         async with session_maker.begin() as session:
             match payload.identity_type:
                 case types.IdentityType.EMAIL:
-                    services.register_service(
-                        await repositories.get_user_id_by_email(
-                            session, payload.identity_value
-                        ),
-                        types.IdentityType.EMAIL,
-                    )
+                    if await repositories.get_user_id_by_email(
+                        session, payload.identity_value
+                    ):
+                        raise exceptions.DuplicateEmailExc
                 case types.IdentityType.PHONE_NUMBER:
-                    services.register_service(
-                        await repositories.get_user_id_by_phone_number(
-                            session, payload.identity_value
-                        ),
-                        types.IdentityType.PHONE_NUMBER,
-                    )
+                    if await repositories.get_user_id_by_phone_number(
+                        session, payload.identity_value
+                    ):
+                        raise exceptions.DuplicatePhoneNumberExc
                 case _:
                     assert_never(payload.identity_type)
             user_id = await repositories.create_user(  # Side effects: CheckDbConnection
@@ -48,6 +48,13 @@ async def register_handler(
                 username=payload.username,
                 avatar=payload.avatar,
             )
+        verification_code = services.send_verification_code()
+        await repositories.set_key_to_cache(
+            redis=redis,
+            name=f"verification-code:{verification_code}",
+            value=str(user_id),
+            ex=auth_config.VERIFY_ACCOUNT_MESSAGE_LIFETIME_SEC,
+        )
 
     except exceptions.DuplicateEmailExc as ex:
         logger.info(ex)
@@ -59,4 +66,27 @@ async def register_handler(
 
     except Exception as ex:
         logger.exception(ex)
+        raise CheckDbConnection
+
+
+async def activate_account(
+    session_maker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    verification_code: str,
+):
+    user_id = await repositories.get_del_cached_value(
+        redis=redis, name=f"verification-code:{verification_code}"
+    )
+    try:
+        if user_id is None:
+            raise exceptions.InvalidVerificationCodeExc
+        async with session_maker.begin() as session:
+            await repositories.activate_user_account(session, types.UserId(user_id))
+
+    except exceptions.InvalidVerificationCodeExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
         raise CheckDbConnection

@@ -11,3 +11,9 @@ class DuplicatePhoneNumberExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_409_CONFLICT
         self.detail = "Phone number must be unique."
+
+
+class InvalidVerificationCodeExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "Code might expired or invalid."

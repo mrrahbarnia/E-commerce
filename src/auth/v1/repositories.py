@@ -1,6 +1,8 @@
 import logging
+from typing import Any
 
 import sqlalchemy as sa
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.v1 import models
@@ -8,6 +10,9 @@ from src.auth.v1 import types
 from src.common.exceptions import CheckDbConnection
 
 logger = logging.getLogger("auth")
+
+
+# ======================= Postgresql operations ======================= #
 
 
 async def get_user_id_by_email(
@@ -57,7 +62,7 @@ async def create_user_identity(
     full_name: str,
     username: str,
     avatar: str,
-):
+) -> None:
     smtm = sa.insert(models.UserIdentity).values(
         {
             models.UserIdentity.user_id: user_id,
@@ -71,5 +76,27 @@ async def create_user_identity(
     try:
         await db_session.execute(smtm)
     except Exception as ex:
-        logging.error(ex)
+        logger.error(ex)
         raise CheckDbConnection
+
+
+async def activate_user_account(
+    db_session: AsyncSession, user_id: types.UserId
+) -> None:
+    smtm = (
+        sa.update(models.User)
+        .values({models.User.is_active: True})
+        .where(models.User.id == user_id)
+    )
+    await db_session.execute(smtm)
+
+
+# ======================= Redis operations ======================= #
+
+
+async def set_key_to_cache(redis: Redis, name: str, value: str, ex: int) -> None:
+    await redis.set(name=name, value=value, ex=ex)
+
+
+async def get_del_cached_value(redis: Redis, name: str) -> Any:
+    return await redis.getdel(name=name)
