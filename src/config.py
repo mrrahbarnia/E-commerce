@@ -47,7 +47,7 @@ class LogConfig(BaseModel):
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO" if settings.ENVIRONMENT.is_debug else "WARNING",
+            "level": "WARNING",
             "formatter": "json",
             "filename": "/app/logs/app.log",
             "maxBytes": 5000000,  # 5 MB

@@ -43,3 +43,7 @@ class RegisterIn(RegisterOut):
         )
 
         return self
+
+
+class ActivateAccount(BaseModel):
+    verification_code: Annotated[str, Field(max_length=6)]

@@ -14,6 +14,7 @@ class User(Base):
     role: so.Mapped[types.UserRole] = so.mapped_column(sa.Enum(types.UserRole))
     registered_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
     hashed_password: so.Mapped[str] = so.mapped_column(sa.String(250))
+    is_active: so.Mapped[bool] = so.mapped_column(default=False)
     id: so.Mapped[types.UserId] = so.mapped_column(default=lambda: uuid4())
 
 
