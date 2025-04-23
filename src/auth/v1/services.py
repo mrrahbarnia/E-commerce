@@ -15,7 +15,7 @@ from src.auth.v1.config import auth_config
 logger = logging.getLogger("auth")
 
 
-async def register_handler(
+async def register(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
     payload: schemas.RegisterIn,
@@ -68,7 +68,7 @@ async def register_handler(
         raise CheckDbConnection
 
 
-async def activate_account_handler(
+async def activate_account(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
     verification_code: str,
@@ -91,7 +91,7 @@ async def activate_account_handler(
         raise CheckDbConnection
 
 
-async def resend_verification_code_handler(
+async def resend_verification_code(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
     payload: schemas.ResendVerificationCodeIn,
@@ -111,6 +111,13 @@ async def resend_verification_code_handler(
         else:
             match payload.identity_type:
                 case types.IdentityType.EMAIL:
-                    utils.send_email()
+                    utils.send_email()  # TODO: Sending email in production mode.
                 case types.IdentityType.PHONE_NUMBER:
-                    utils.send_sms()
+                    utils.send_sms()  # TODO: Sending SMS in production mode.
+
+
+async def login(
+    session_maker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    payload: schemas.LoginIn,
+): ...

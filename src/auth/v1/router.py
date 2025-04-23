@@ -2,6 +2,7 @@ from typing import Annotated
 
 from redis.asyncio import Redis
 from fastapi import APIRouter, status, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.database import session_maker, redis_conn
@@ -65,7 +66,7 @@ async def register(
     - **username** must be at least 200 chars.
     - **full_name** must be at least 200 chars.
     """
-    await services.register_handler(session_maker, redis, payload)
+    await services.register(session_maker, redis, payload)
     return {"username": payload.username, "identity_value": payload.identity_value}
 
 
@@ -103,9 +104,7 @@ async def activate_account(
     redis: Annotated[Redis, Depends(redis_conn)],
     payload: schemas.ActivateAccountIn,
 ) -> dict:
-    await services.activate_account_handler(
-        session_maker, redis, payload.verification_code
-    )
+    await services.activate_account(session_maker, redis, payload.verification_code)
     return {"detail": "Verified successfully."}
 
 
@@ -150,5 +149,47 @@ async def resend_verification_code(
     """
     - **identity value** must be in correct format.
     """
-    await services.resend_verification_code_handler(session_maker, redis, payload)
+    await services.resend_verification_code(session_maker, redis, payload)
     return {"detail": "Resent successfully."}
+
+
+@router.post(
+    "/login/",
+    status_code=status.HTTP_200_OK,
+    # response_model=schemas.LoginOut,
+    responses={
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "string",
+                        "refresh_token": "string",
+                    }
+                }
+            }
+        },
+        401: {
+            "content": {
+                "application/json": {"example": {"detail": "Invalid credentials."}}
+            }
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
+async def login(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+    redis: Annotated[Redis, Depends(redis_conn)],
+    payload: Annotated[OAuth2PasswordRequestForm, Depends()],
+) -> dict:
+    """
+    - **identity type** must be "email" or "phone_number"
+    - **identity value** must be in correct format.
+    - **password** must be at least 8 chars.
+    """
+    await services, login(session_maker, redis)
