@@ -97,18 +97,25 @@ async def resend_verification_code(
     payload: schemas.ResendVerificationCodeIn,
 ):
     async with session_maker.begin() as session:
-        is_active: (
-            bool | None
+        user_info: (
+            tuple[types.UserId, bool] | None
         ) = await repositories.check_user_existence_and_account_activation_status(
             db_session=session,
             identity_type=payload.identity_type(),
             identity_value=payload.identity_value,
         )
-        if is_active is None:
+        if user_info is None:
             raise exceptions.AccountDoesntExistExc
-        elif is_active:
+        elif user_info[1] is True:
             raise exceptions.AccountAlreadyActivatedExc
         else:
+            verification_code = utils.generate_random_code(6)
+            await repositories.set_key_to_cache(
+                redis,
+                f"verification-code:{verification_code}",
+                str(user_info[0]),
+                ex=auth_config.VERIFY_ACCOUNT_MESSAGE_LIFETIME_SEC,
+            )
             match payload.identity_type:
                 case types.IdentityType.EMAIL:
                     utils.send_email()  # TODO: Sending email in production mode.
@@ -119,5 +126,39 @@ async def resend_verification_code(
 async def login(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
-    payload: schemas.LoginIn,
-): ...
+    username: str,
+    password: str,
+) -> schemas.Token:
+    try:
+        async with session_maker.begin() as session:
+            user_info = await repositories.get_user_credentials_by_identity_value(
+                session, username
+            )
+            if (not user_info) or (not utils.verify_password(password, user_info[2])):
+                raise exceptions.InvalidCredentialsExc
+            elif user_info[1] is False:
+                raise exceptions.AccountNotActiveExc
+            else:
+                access_token = utils.encode_access_token({"user_id": str(user_info[0])})
+                refresh_token = utils.encode_refresh_token(
+                    {"user_id": str(user_info[0])}
+                )
+                return schemas.Token(
+                    access_token=access_token, refresh_token=refresh_token
+                )
+
+    except exceptions.InvalidCredentialsExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except exceptions.AccountNotActiveExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
+        raise CheckDbConnection
+
+
+async def get_refresh_token(refresh_token: str):
+    print(refresh_token)

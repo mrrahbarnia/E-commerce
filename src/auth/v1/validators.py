@@ -23,3 +23,13 @@ def validate_identity_value_based_on_identity_type(
     elif identity_type.value == types.IdentityType.PHONE_NUMBER.value:
         if not re.match(auth_config.PHONE_NUMBER_PATTERN, identity_value):
             raise ValueError("Phone number must be exact 11 digits!")
+
+
+def ensure_identity_value_format(value: str) -> str:
+    match value:
+        case v if re.fullmatch(auth_config.PHONE_NUMBER_PATTERN, v) or re.fullmatch(
+            auth_config.EMAIL_PATTERN, v
+        ):
+            return v
+        case _:
+            raise ValueError("Invalid identity_value format.")

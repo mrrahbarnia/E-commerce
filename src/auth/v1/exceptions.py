@@ -21,7 +21,7 @@ class InvalidVerificationCodeExc(HTTPException):
 
 class AccountDoesntExistExc(HTTPException):
     def __init__(self) -> None:
-        self.status_code = status.HTTP_404_NOT_FOUND
+        self.status_code = status.HTTP_401_UNAUTHORIZED
         self.detail = "There is no account with the provided info."
 
 
@@ -29,3 +29,15 @@ class AccountAlreadyActivatedExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_401_UNAUTHORIZED
         self.detail = "Account has already been activated."
+
+
+class InvalidCredentialsExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self.detail = "There is no account with the provided info."
+
+
+class AccountNotActiveExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_401_UNAUTHORIZED
+        self.detail = "Account is not active."

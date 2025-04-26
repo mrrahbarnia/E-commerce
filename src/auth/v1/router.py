@@ -1,10 +1,11 @@
 from typing import Annotated
 
 from redis.asyncio import Redis
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, Response, status, Depends, Cookie
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from src.config import settings
 from src.database import session_maker, redis_conn
 from src.auth.v1 import schemas
 from src.auth.v1 import services
@@ -162,8 +163,7 @@ async def resend_verification_code(
             "content": {
                 "application/json": {
                     "example": {
-                        "access_token": "string",
-                        "refresh_token": "string",
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V"
                     }
                 }
             }
@@ -183,13 +183,27 @@ async def resend_verification_code(
     },
 )
 async def login(
+    response: Response,
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     redis: Annotated[Redis, Depends(redis_conn)],
     payload: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> dict:
-    """
-    - **identity type** must be "email" or "phone_number"
-    - **identity value** must be in correct format.
-    - **password** must be at least 8 chars.
-    """
-    await services, login(session_maker, redis)
+    tokens = await services.login(
+        session_maker, redis, payload.username, payload.password
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=True if settings.ENVIRONMENT == "PRODUCTION" else False,
+        samesite="strict" if settings.ENVIRONMENT == "PRODUCTION" else "none",
+        max_age=auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+        path="/",
+    )
+    return {"access_token": tokens.access_token}
+
+
+@router.post("/refresh-token/")
+async def get_refresh_token(refresh_token: str = Cookie(None)):
+    await services.get_refresh_token(refresh_token)
+    return "OK"

@@ -54,6 +54,22 @@ async def create_user(db_session: AsyncSession, hashed_password: str) -> types.U
         raise CheckDbConnection
 
 
+async def get_user_credentials_by_identity_value(
+    db_session: AsyncSession, username: str
+) -> tuple[types.UserId, bool, str] | None:
+    smtm = (
+        sa.select(
+            models.User.id,
+            models.User.is_active,
+            models.User.hashed_password,
+        )
+        .select_from(models.User)
+        .join(models.UserIdentity, models.User.id == models.UserIdentity.user_id)
+        .where(models.UserIdentity.identity_value == username)
+    )
+    return (await db_session.execute(smtm)).tuples().first()
+
+
 async def create_user_identity(
     db_session: AsyncSession,
     user_id: types.UserId,
@@ -82,9 +98,9 @@ async def create_user_identity(
 
 async def check_user_existence_and_account_activation_status(
     db_session: AsyncSession, identity_type: types.IdentityType, identity_value: Any
-) -> bool | None:
+) -> tuple[types.UserId, bool] | None:
     smtm = (
-        sa.select(models.User.is_active)
+        sa.select(models.User.id, models.User.is_active)
         .join(models.UserIdentity, models.User.id == models.UserIdentity.user_id)
         .where(
             sa.and_(
@@ -93,7 +109,7 @@ async def check_user_existence_and_account_activation_status(
             )
         )
     )
-    return await db_session.scalar(smtm)
+    return (await db_session.execute(smtm)).tuples().first()
 
 
 async def activate_user_account(

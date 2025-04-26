@@ -51,20 +51,17 @@ class ActivateAccountIn(BaseModel):
     verification_code: Annotated[str, Field(max_length=6)]
 
 
-def ensure_identity_value_format(value: str) -> str:
-    match value:
-        case v if re.fullmatch(auth_config.PHONE_NUMBER_PATTERN, v) or re.fullmatch(
-            auth_config.EMAIL_PATTERN, v
-        ):
-            return v
-        case _:
-            raise ValueError("Invalid identity_value format.")
-
-
 class ResendVerificationCodeIn(BaseModel):
-    identity_value: Annotated[str, BeforeValidator(ensure_identity_value_format)]
+    identity_value: Annotated[
+        str, BeforeValidator(validators.ensure_identity_value_format)
+    ]
 
     def identity_type(self) -> types.IdentityType:
         if re.fullmatch(auth_config.PHONE_NUMBER_PATTERN, self.identity_value):
             return types.IdentityType.PHONE_NUMBER
         return types.IdentityType.EMAIL
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str

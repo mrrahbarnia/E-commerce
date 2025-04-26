@@ -32,7 +32,7 @@ class UserIdentity(Base):
     identity_type: so.Mapped[types.IdentityType] = so.mapped_column(
         sa.Enum(types.IdentityType)
     )
-    identity_value: so.Mapped[str] = so.mapped_column(sa.String(200))
+    identity_value: so.Mapped[str] = so.mapped_column(sa.String(200), index=True)
     full_name: so.Mapped[str] = so.mapped_column(sa.String(200))
     username: so.Mapped[str] = so.mapped_column(sa.String(200))
     avatar: so.Mapped[str] = so.mapped_column(sa.String(200))
