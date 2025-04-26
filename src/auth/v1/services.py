@@ -10,6 +10,7 @@ from src.auth.v1 import types
 from src.auth.v1 import repositories
 from src.auth.v1 import exceptions
 from src.auth.v1 import utils
+from src.auth.v1.dependencies import decode_token
 from src.auth.v1.config import auth_config
 
 logger = logging.getLogger("auth")
@@ -143,6 +144,13 @@ async def login(
                 refresh_token = utils.encode_refresh_token(
                     {"user_id": str(user_info[0])}
                 )
+                # Whitelisting valid refresh tokens
+                await repositories.set_key_to_cache(
+                    redis,
+                    refresh_token,
+                    str(user_info[0]),
+                    auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+                )
                 return schemas.Token(
                     access_token=access_token, refresh_token=refresh_token
                 )
@@ -160,5 +168,17 @@ async def login(
         raise CheckDbConnection
 
 
-async def get_refresh_token(refresh_token: str):
-    print(refresh_token)
+async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
+    if await repositories.get_del_cached_value(redis, refresh_token) is None:
+        raise exceptions.InvalidTokenExc
+    payload = decode_token(refresh_token)
+    access_token = utils.encode_access_token({"user_id": payload["user_id"]})
+    new_refresh_token = utils.encode_refresh_token({"user_id": payload["user_id"]})
+    # Whitelisting valid refresh tokens
+    await repositories.set_key_to_cache(
+        redis,
+        refresh_token,
+        payload["user_id"],
+        auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+    )
+    return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)

@@ -157,7 +157,6 @@ async def resend_verification_code(
 @router.post(
     "/login/",
     status_code=status.HTTP_200_OK,
-    # response_model=schemas.LoginOut,
     responses={
         200: {
             "content": {
@@ -204,6 +203,19 @@ async def login(
 
 
 @router.post("/refresh-token/")
-async def get_refresh_token(refresh_token: str = Cookie(None)):
-    await services.get_refresh_token(refresh_token)
-    return "OK"
+async def get_refresh_token(
+    response: Response,
+    redis: Annotated[Redis, Depends(redis_conn)],
+    refresh_token: str = Cookie(None),
+) -> dict:
+    tokens = await services.get_refresh_token(redis, refresh_token)
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=True if settings.ENVIRONMENT == "PRODUCTION" else False,
+        samesite="strict" if settings.ENVIRONMENT == "PRODUCTION" else "none",
+        max_age=auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+        path="/",
+    )
+    return {"access_token": tokens.access_token}

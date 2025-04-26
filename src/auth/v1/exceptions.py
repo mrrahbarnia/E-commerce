@@ -41,3 +41,15 @@ class AccountNotActiveExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_401_UNAUTHORIZED
         self.detail = "Account is not active."
+
+
+class InvalidTokenExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_401_UNAUTHORIZED
+        self.detail = "Token is invalid."
+
+
+class ExpiredTokenExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_401_UNAUTHORIZED
+        self.detail = "Token has been expired."
