@@ -202,7 +202,44 @@ async def login(
     return {"access_token": tokens.access_token}
 
 
-@router.post("/refresh-token/", status_code=status.HTTP_200_OK)
+@router.post(
+    "/refresh-token/",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V"
+                    }
+                }
+            }
+        },
+        401: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid-token": {
+                            "summary": "Invalid token",
+                            "value": {"detail": "Token is invalid."},
+                        },
+                        "expired-token": {
+                            "summary": "Expired token",
+                            "value": {"detail": "Token has been expired."},
+                        },
+                    }
+                }
+            },
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
 async def get_refresh_token(
     response: Response,
     redis: Annotated[Redis, Depends(redis_conn)],
