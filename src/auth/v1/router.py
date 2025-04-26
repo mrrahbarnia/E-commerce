@@ -202,7 +202,7 @@ async def login(
     return {"access_token": tokens.access_token}
 
 
-@router.post("/refresh-token/")
+@router.post("/refresh-token/", status_code=status.HTTP_200_OK)
 async def get_refresh_token(
     response: Response,
     redis: Annotated[Redis, Depends(redis_conn)],
@@ -219,3 +219,10 @@ async def get_refresh_token(
         path="/",
     )
     return {"access_token": tokens.access_token}
+
+
+@router.get("/logout/", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    redis: Annotated[Redis, Depends(redis_conn)], refresh_token: str = Cookie(None)
+) -> None:
+    await services.logout(redis, refresh_token)

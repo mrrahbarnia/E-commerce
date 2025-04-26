@@ -177,8 +177,12 @@ async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
     # Whitelisting valid refresh tokens
     await repositories.set_key_to_cache(
         redis,
-        refresh_token,
+        new_refresh_token,
         payload["user_id"],
         auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
     )
     return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)
+
+
+async def logout(redis: Redis, refresh_token: str) -> None:
+    await repositories.get_del_cached_value(redis, refresh_token)
