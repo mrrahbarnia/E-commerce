@@ -45,7 +45,7 @@ class Seller(Base):
     __tablename__ = "sellers"
     __table_args__ = (sa.PrimaryKeyConstraint("id"),)
     id: so.Mapped[types.SellerId] = so.mapped_column(autoincrement=True)
-    company_name: so.Mapped[str] = so.mapped_column(sa.String(200))
+    company_name: so.Mapped[str] = so.mapped_column(sa.String(200), unique=True)
     user_id: so.Mapped[types.UserId] = so.mapped_column(
         sa.ForeignKey(f"{User.__tablename__}.id", ondelete="CASCADE")
     )

@@ -12,10 +12,11 @@ from src.auth.v1 import services
 from src.auth.v1.config import auth_config
 
 
-router = APIRouter()
+auth_router = APIRouter(prefix="/v1/auth", tags=["auth"])
+admin_router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
 
-@router.post(
+@auth_router.post(
     "/register/",
     status_code=status.HTTP_201_CREATED,
     response_model=schemas.RegisterOut,
@@ -39,6 +40,10 @@ router = APIRouter()
                         "duplicate-phone-number": {
                             "summary": "Duplicate phone number",
                             "value": {"detail": "Phone number must be unique."},
+                        },
+                        "duplicate-company-name": {
+                            "summary": "Duplicate company name",
+                            "value": {"detail": "Company name must be unique."},
                         },
                     }
                 }
@@ -66,12 +71,13 @@ async def register(
     - **confirm passwords** must be match password.
     - **username** must be at least 200 chars.
     - **full_name** must be at least 200 chars.
+    - **company_name** If is_seller is set to true then company_name is mandatory and must at least 200 chars.
     """
     await services.register(session_maker, redis, payload)
     return {"username": payload.username, "identity_value": payload.identity_value}
 
 
-@router.post(
+@auth_router.post(
     "/activate-account/",
     status_code=status.HTTP_200_OK,
     description=f"""
@@ -109,7 +115,7 @@ async def activate_account(
     return {"detail": "Verified successfully."}
 
 
-@router.post(
+@auth_router.post(
     "/verification-code/resend/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -154,7 +160,7 @@ async def resend_verification_code(
     return {"detail": "Resent successfully."}
 
 
-@router.post(
+@auth_router.post(
     "/login/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -202,7 +208,7 @@ async def login(
     return {"access_token": tokens.access_token}
 
 
-@router.post(
+@auth_router.post(
     "/refresh-token/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -258,8 +264,20 @@ async def get_refresh_token(
     return {"access_token": tokens.access_token}
 
 
-@router.get("/logout/", status_code=status.HTTP_204_NO_CONTENT)
+@auth_router.get("/logout/", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     redis: Annotated[Redis, Depends(redis_conn)], refresh_token: str = Cookie(None)
 ) -> None:
     await services.logout(redis, refresh_token)
+
+
+# @admin_router.put(
+
+# )
+
+# @admin_router.get(
+#     "/users/",
+#     status_code=status.HTTP_200_OK,
+#     response_model=list[schemas.UserOut],
+# )
+# async def get_users()

@@ -20,4 +20,4 @@ async def lifespan(_application: FastAPI) -> AsyncGenerator:
 
 app = FastAPI(**app_configs, lifespan=lifespan)
 
-app.include_router(router=auth_router_v1.router, prefix="/v1/auth", tags=["auth"])
+app.include_router(router=auth_router_v1.auth_router)

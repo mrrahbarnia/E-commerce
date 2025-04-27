@@ -25,6 +25,13 @@ def validate_identity_value_based_on_identity_type(
             raise ValueError("Phone number must be exact 11 digits!")
 
 
+def ensure_enter_company_name_for_sellers(
+    is_seller: bool, company_name: str | None
+) -> None:
+    if is_seller and not company_name:
+        raise ValueError("Sellers must enter their company name.")
+
+
 def ensure_identity_value_format(value: str) -> str:
     match value:
         case v if re.fullmatch(auth_config.PHONE_NUMBER_PATTERN, v) or re.fullmatch(

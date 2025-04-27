@@ -33,12 +33,16 @@ async def get_user_id_by_phone_number(
     return await db_session.scalar(smtm)
 
 
-async def create_user(db_session: AsyncSession, hashed_password: str) -> types.UserId:
+async def create_user(
+    db_session: AsyncSession, hashed_password: str, is_seller: bool
+) -> types.UserId:
     smtm = (
         sa.insert(models.User)
         .values(
             {
-                models.User.role: types.UserRole.CUSTOMER,
+                models.User.role: types.UserRole.CUSTOMER
+                if not is_seller
+                else types.UserRole.SELLER,
                 models.User.hashed_password: hashed_password,
             }
         )
@@ -52,6 +56,19 @@ async def create_user(db_session: AsyncSession, hashed_password: str) -> types.U
     except Exception as ex:
         logger.error(ex)
         raise CheckDbConnection
+
+
+async def create_seller(
+    db_session: AsyncSession, user_id: types.UserId, company_name: str
+) -> None:
+    smtm = sa.insert(models.Seller).values(
+        {
+            models.Seller.user_id: user_id,
+            models.Seller.company_name: company_name,
+            models.Seller.is_founder: True,
+        }
+    )
+    await db_session.execute(smtm)
 
 
 async def get_user_credentials_by_identity_value(
@@ -89,11 +106,7 @@ async def create_user_identity(
             models.UserIdentity.username: username,
         }
     )
-    try:
-        await db_session.execute(smtm)
-    except Exception as ex:
-        logger.error(ex)
-        raise CheckDbConnection
+    await db_session.execute(smtm)
 
 
 async def check_user_existence_and_account_activation_status(

@@ -13,6 +13,12 @@ class DuplicatePhoneNumberExc(HTTPException):
         self.detail = "Phone number must be unique."
 
 
+class DuplicateCompanyNameExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_409_CONFLICT
+        self.detail = "Company name must be unique."
+
+
 class InvalidVerificationCodeExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_400_BAD_REQUEST

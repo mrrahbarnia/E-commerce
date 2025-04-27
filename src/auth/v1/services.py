@@ -37,7 +37,7 @@ async def register(
                 case _:
                     assert_never(payload.identity_type)
             user_id = await repositories.create_user(  # Side effects: CheckDbConnection
-                session, utils.hash_password(payload.password)
+                session, utils.hash_password(payload.password), payload.is_seller
             )
             await repositories.create_user_identity(  # Side effects: CheckDbConnection
                 db_session=session,
@@ -48,6 +48,11 @@ async def register(
                 username=payload.username,
                 avatar=payload.avatar,
             )
+            if payload.is_seller:
+                assert (
+                    payload.company_name is not None
+                )  # Because of validator layer on top of schemas.
+                await repositories.create_seller(session, user_id, payload.company_name)
         verification_code = utils.generate_random_code(6)
         await repositories.set_key_to_cache(
             redis=redis,
@@ -65,6 +70,9 @@ async def register(
         raise ex
 
     except Exception as ex:
+        if "uq_sellers_company_name" in str(ex):
+            logger.info(ex)
+            raise exceptions.DuplicateCompanyNameExc
         logger.exception(ex)
         raise CheckDbConnection
 
