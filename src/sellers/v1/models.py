@@ -36,3 +36,15 @@ class SellerStaff(Base):
         sa.ForeignKey("roles.id", ondelete="SET NULL"), nullable=True
     )
     created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
+
+
+class StaffInvitation(Base):
+    __tablename__ = "staff_invitations"
+    __table_args__ = (sa.PrimaryKeyConstraint("user_id", "seller_id"),)
+    user_id: so.Mapped[UserId] = so.mapped_column(
+        sa.ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    seller_id: so.Mapped[types.SellerId] = so.mapped_column(
+        sa.ForeignKey(f"{Seller.__tablename__}.id", ondelete="CASCADE"), index=True
+    )
+    sent_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
