@@ -29,6 +29,13 @@ async def get_user_id_by_phone_number(
     return await db_session.scalar(smtm)
 
 
+async def check_user_is_active(
+    db_session: AsyncSession, user_id: types.UserId
+) -> bool | None:
+    smtm = sa.select(models.User.is_active).where(models.User.id == user_id)
+    return await db_session.scalar(smtm)
+
+
 async def create_user(
     db_session: AsyncSession, hashed_password: str, is_seller: bool
 ) -> types.UserId:
@@ -52,19 +59,6 @@ async def create_user(
     except Exception as ex:
         logger.error(ex)
         raise CheckDbConnection
-
-
-async def create_seller(
-    db_session: AsyncSession, user_id: types.UserId, company_name: str
-) -> None:
-    smtm = sa.insert(models.Seller).values(
-        {
-            models.Seller.user_id: user_id,
-            models.Seller.company_name: company_name,
-            models.Seller.is_founder: True,
-        }
-    )
-    await db_session.execute(smtm)
 
 
 async def get_user_credentials_by_identity_value(

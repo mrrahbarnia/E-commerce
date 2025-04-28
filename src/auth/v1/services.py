@@ -4,7 +4,7 @@ from typing import assert_never
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.common.exceptions import CheckDbConnection
+
 from src.auth.v1 import schemas
 from src.auth.v1 import types
 from src.auth.v1 import repositories
@@ -12,7 +12,9 @@ from src.auth.v1 import exceptions
 from src.auth.v1 import utils
 from src.auth.v1.dependencies import decode_token
 from src.auth.v1.config import auth_config
+from src.common.exceptions import CheckDbConnection
 from src.common.repositories import set_key_to_cache, get_del_cached_value
+from src.sellers.v1 import repositories as seller_repositories
 
 logger = logging.getLogger("auth")
 
@@ -55,7 +57,9 @@ async def register(
                 assert (
                     payload.company_name is not None
                 )  # Because of validator layer on top of schemas.
-                await repositories.create_seller(session, user_id, payload.company_name)
+                await seller_repositories.create_seller(
+                    session, user_id, payload.company_name
+                )
         verification_code = utils.generate_random_code(6)
         await set_key_to_cache(
             redis=redis,

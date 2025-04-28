@@ -21,7 +21,10 @@ class Seller(Base):
 
 class SellerStaff(Base):
     __tablename__ = "seller_staff"
-    __table_args__ = (sa.PrimaryKeyConstraint("id"),)
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "seller_id", name="uq_user_seller"),
+    )
     id: so.Mapped[types.SellerStaffId] = so.mapped_column(autoincrement=True)
     user_id: so.Mapped[UserId] = so.mapped_column(
         sa.ForeignKey("users.id", ondelete="CASCADE"), index=True
