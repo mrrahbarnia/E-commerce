@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 import sqlalchemy as sa
-from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.v1 import models
@@ -72,19 +71,31 @@ async def create_seller(
 
 
 async def get_user_credentials_by_identity_value(
-    db_session: AsyncSession, username: str
-) -> tuple[types.UserId, bool, str] | None:
+    db_session: AsyncSession, identity_value: str
+) -> tuple[types.UserId, bool, str, types.UserRole] | None:
+    # SELECT u.id, u.is_active, u.hashed_password, u.role
+    # FROM users u
+    # JOIN user_identities ui ON u.id=ui.user_id AND ui.identity_value='user@example.com'
     smtm = (
         sa.select(
             models.User.id,
             models.User.is_active,
             models.User.hashed_password,
+            models.User.role,
         )
         .select_from(models.User)
-        .join(models.UserIdentity, models.User.id == models.UserIdentity.user_id)
-        .where(models.UserIdentity.identity_value == username)
+        .join(
+            models.UserIdentity,
+            sa.and_(
+                models.User.id == models.UserIdentity.user_id,
+                models.UserIdentity.identity_value == identity_value,
+            ),
+        )
     )
     return (await db_session.execute(smtm)).tuples().first()
+
+
+# async def get_user_roles()
 
 
 async def create_user_identity(

@@ -38,7 +38,9 @@ async def register(
                 case _:
                     assert_never(payload.identity_type)
             user_id = await repositories.create_user(  # Side effects: CheckDbConnection
-                session, utils.hash_password(payload.password), payload.is_seller
+                session,
+                utils.hash_password(payload.password),
+                True if payload.is_seller else False,
             )
             await repositories.create_user_identity(  # Side effects: CheckDbConnection
                 db_session=session,
@@ -144,31 +146,40 @@ async def login(
             user_info = await repositories.get_user_credentials_by_identity_value(
                 session, username
             )
-            if (not user_info) or (not utils.verify_password(password, user_info[2])):
+            if not user_info:
                 raise exceptions.InvalidCredentialsExc
-            elif user_info[1] is False:
+
+            user_id, is_active, hashed_password, role = user_info
+            # if role == types.UserRole.SELLER:
+            #     raise exceptions.SellerAccountExc
+
+            if not utils.verify_password(password, hashed_password):
+                raise exceptions.InvalidCredentialsExc
+
+            elif is_active is False:
                 raise exceptions.AccountNotActiveExc
+
             else:
                 # Generating security stamp, storing it in cache and decoding it into the access token.
                 security_stamp = utils.generate_security_stamp()
                 await set_key_to_cache(
                     redis,
                     f"security-stamp:{security_stamp}",
-                    str(user_info[0]),
+                    str(user_id),
                     auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
                 )
                 access_token = utils.encode_access_token(
-                    {"user_id": str(user_info[0]), "security_stamp": security_stamp}
+                    {"user_id": str(user_id), "security_stamp": security_stamp}
                 )
 
                 refresh_token = utils.encode_refresh_token(
-                    {"user_id": str(user_info[0]), "security_stamp": security_stamp},
+                    {"user_id": str(user_id), "security_stamp": security_stamp},
                 )
                 # Whitelisting valid refresh tokens
                 await set_key_to_cache(
                     redis,
                     refresh_token,
-                    str(user_info[0]),
+                    str(user_id),
                     auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
                 )
                 return schemas.Token(

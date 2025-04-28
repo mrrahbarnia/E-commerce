@@ -66,6 +66,11 @@ class LogConfig(BaseModel):
             "level": "DEBUG",
             "propagate": False,
         },
+        "sellers": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     }
 
 

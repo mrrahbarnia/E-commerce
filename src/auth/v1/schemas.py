@@ -37,7 +37,7 @@ class RegisterIn(RegisterOut):
     confirm_password: str
     full_name: Annotated[str, Field(max_length=200)]
     avatar: Annotated[str, Field(max_length=200)]
-    is_seller: bool
+    is_seller: bool | None = None
     company_name: Annotated[str | None, Field(max_length=200)] = None
 
     @model_validator(mode="after")

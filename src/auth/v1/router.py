@@ -11,12 +11,10 @@ from src.auth.v1 import schemas
 from src.auth.v1 import services
 from src.auth.v1.config import auth_config
 
-
-auth_router = APIRouter(prefix="/v1/auth", tags=["auth"])
-admin_router = APIRouter(prefix="/v1/admin", tags=["admin"])
+router = APIRouter()
 
 
-@auth_router.post(
+@router.post(
     "/register/",
     status_code=status.HTTP_201_CREATED,
     response_model=schemas.RegisterOut,
@@ -77,7 +75,7 @@ async def register(
     return {"username": payload.username, "identity_value": payload.identity_value}
 
 
-@auth_router.post(
+@router.post(
     "/activate-account/",
     status_code=status.HTTP_200_OK,
     description=f"""
@@ -115,7 +113,7 @@ async def activate_account(
     return {"detail": "Verified successfully."}
 
 
-@auth_router.post(
+@router.post(
     "/verification-code/resend/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -160,7 +158,7 @@ async def resend_verification_code(
     return {"detail": "Resent successfully."}
 
 
-@auth_router.post(
+@router.post(
     "/login/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -208,7 +206,7 @@ async def login(
     return {"access_token": tokens.access_token}
 
 
-@auth_router.post(
+@router.post(
     "/refresh-token/",
     status_code=status.HTTP_200_OK,
     responses={
@@ -264,20 +262,8 @@ async def get_refresh_token(
     return {"access_token": tokens.access_token}
 
 
-@auth_router.get("/logout/", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/logout/", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     redis: Annotated[Redis, Depends(redis_conn)], refresh_token: str = Cookie(None)
 ) -> None:
     await services.logout(redis, refresh_token)
-
-
-# @admin_router.put(
-
-# )
-
-# @admin_router.get(
-#     "/users/",
-#     status_code=status.HTTP_200_OK,
-#     response_model=list[schemas.UserOut],
-# )
-# async def get_users()
