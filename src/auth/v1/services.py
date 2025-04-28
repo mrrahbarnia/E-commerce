@@ -12,6 +12,7 @@ from src.auth.v1 import exceptions
 from src.auth.v1 import utils
 from src.auth.v1.dependencies import decode_token
 from src.auth.v1.config import auth_config
+from src.common.repositories import set_key_to_cache, get_del_cached_value
 
 logger = logging.getLogger("auth")
 
@@ -54,7 +55,7 @@ async def register(
                 )  # Because of validator layer on top of schemas.
                 await repositories.create_seller(session, user_id, payload.company_name)
         verification_code = utils.generate_random_code(6)
-        await repositories.set_key_to_cache(
+        await set_key_to_cache(
             redis=redis,
             name=f"verification-code:{verification_code}",
             value=str(user_id),
@@ -82,7 +83,7 @@ async def activate_account(
     redis: Redis,
     verification_code: str,
 ):
-    user_id = await repositories.get_del_cached_value(
+    user_id = await get_del_cached_value(
         redis=redis, name=f"verification-code:{verification_code}"
     )
     try:
@@ -119,7 +120,7 @@ async def resend_verification_code(
             raise exceptions.AccountAlreadyActivatedExc
         else:
             verification_code = utils.generate_random_code(6)
-            await repositories.set_key_to_cache(
+            await set_key_to_cache(
                 redis,
                 f"verification-code:{verification_code}",
                 str(user_info[0]),
@@ -148,12 +149,23 @@ async def login(
             elif user_info[1] is False:
                 raise exceptions.AccountNotActiveExc
             else:
-                access_token = utils.encode_access_token({"user_id": str(user_info[0])})
+                # Generating security stamp, storing it in cache and decoding it into the access token.
+                security_stamp = utils.generate_security_stamp()
+                await set_key_to_cache(
+                    redis,
+                    f"security-stamp:{security_stamp}",
+                    str(user_info[0]),
+                    auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
+                )
+                access_token = utils.encode_access_token(
+                    {"user_id": str(user_info[0]), "security_stamp": security_stamp}
+                )
+
                 refresh_token = utils.encode_refresh_token(
-                    {"user_id": str(user_info[0])}
+                    {"user_id": str(user_info[0]), "security_stamp": security_stamp},
                 )
                 # Whitelisting valid refresh tokens
-                await repositories.set_key_to_cache(
+                await set_key_to_cache(
                     redis,
                     refresh_token,
                     str(user_info[0]),
@@ -177,20 +189,39 @@ async def login(
 
 
 async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
-    if await repositories.get_del_cached_value(redis, refresh_token) is None:
+    if await get_del_cached_value(redis, refresh_token) is None:
         raise exceptions.InvalidTokenExc
     payload = decode_token(refresh_token)
-    access_token = utils.encode_access_token({"user_id": payload["user_id"]})
-    new_refresh_token = utils.encode_refresh_token({"user_id": payload["user_id"]})
+    # Generating security stamp, storing it in cache and decoding it into the access token.
+    await set_key_to_cache(
+        redis,
+        f"security-stamp:{payload['security_stamp']}",
+        str(payload["user_id"]),
+        auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
+    )
+    access_token = utils.encode_access_token(
+        {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+    )
+
+    # Generating new refresh token and storing it in cache.
+    new_refresh_token = utils.encode_refresh_token(
+        {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+    )
     # Whitelisting valid refresh tokens
-    await repositories.set_key_to_cache(
+    await set_key_to_cache(
         redis,
         new_refresh_token,
-        payload["user_id"],
+        str(payload["user_id"]),
         auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
     )
     return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)
 
 
 async def logout(redis: Redis, refresh_token: str) -> None:
-    await repositories.get_del_cached_value(redis, refresh_token)
+    await get_del_cached_value(
+        redis, refresh_token
+    )  # Deleting refresh token from cache.
+    payload = decode_token(refresh_token)
+    await get_del_cached_value(
+        redis, f"security-stamp:{payload['security_stamp']}"
+    )  # Deleting security stamp from cache.

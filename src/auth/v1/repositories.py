@@ -134,14 +134,3 @@ async def activate_user_account(
         .where(models.User.id == user_id)
     )
     await db_session.execute(smtm)
-
-
-# ======================= Redis operations ======================= #
-
-
-async def set_key_to_cache(redis: Redis, name: str, value: str, ex: int) -> None:
-    await redis.set(name=name, value=value, ex=ex)
-
-
-async def get_del_cached_value(redis: Redis, name: str) -> Any:
-    return await redis.getdel(name=name)

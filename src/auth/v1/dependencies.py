@@ -1,4 +1,5 @@
 import logging
+from typing import TypedDict
 from datetime import datetime, timezone
 
 import jwt
@@ -7,15 +8,22 @@ from fastapi.security import OAuth2PasswordBearer
 
 from src.auth.v1 import exceptions
 from src.auth.v1.config import auth_config
+from src.auth.v1.types import UserId
 
 logger = logging.getLogger("auth")
 
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="/v1/auth/login/")
 
 
-def decode_token(token: str) -> dict:
+class TokenPayload(TypedDict):
+    exp: int
+    user_id: UserId
+    security_stamp: str
+
+
+def decode_token(token: str) -> TokenPayload:
     try:
-        payload: dict = jwt.decode(
+        payload: TokenPayload = jwt.decode(
             jwt=token,
             key=auth_config.SECRET_KEY,
             algorithms=[auth_config.JWT_ALGORITHM],

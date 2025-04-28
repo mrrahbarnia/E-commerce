@@ -26,8 +26,8 @@ def generate_random_code(length: int) -> str:
     return str(int(uuid4()))[:length]
 
 
-def generate_random_token() -> str:
-    return secrets.token_urlsafe(12)
+def generate_security_stamp() -> str:
+    return secrets.token_urlsafe(8)
 
 
 def send_sms():
