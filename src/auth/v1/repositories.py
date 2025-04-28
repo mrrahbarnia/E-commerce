@@ -11,9 +11,6 @@ from src.common.exceptions import CheckDbConnection
 logger = logging.getLogger("auth")
 
 
-# ======================= Postgresql operations ======================= #
-
-
 async def get_user_id_by_email(
     db_session: AsyncSession, email: str
 ) -> types.UserId | None:

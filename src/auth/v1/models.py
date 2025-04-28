@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from src.database import Base
 from src.auth.v1 import types
+from src.sellers.v1.types import SellerId, SellerStaffId
 
 
 class User(Base):
@@ -41,17 +42,6 @@ class UserIdentity(Base):
     )
 
 
-class Seller(Base):
-    __tablename__ = "sellers"
-    __table_args__ = (sa.PrimaryKeyConstraint("id"),)
-    id: so.Mapped[types.SellerId] = so.mapped_column(autoincrement=True)
-    company_name: so.Mapped[str] = so.mapped_column(sa.String(200), unique=True)
-    user_id: so.Mapped[types.UserId] = so.mapped_column(
-        sa.ForeignKey(f"{User.__tablename__}.id", ondelete="CASCADE")
-    )
-    is_founder: so.Mapped[bool] = so.mapped_column(default=False)
-
-
 class Role(Base):
     # Only sellers can create or delete roles
     __tablename__ = "roles"
@@ -64,29 +54,13 @@ class Role(Base):
     id: so.Mapped[types.RoleId] = so.mapped_column(autoincrement=True)
     name: so.Mapped[str] = so.mapped_column(sa.String(200))
     description: so.Mapped[str] = so.mapped_column(sa.Text)
-    seller_id: so.Mapped[types.SellerId] = so.mapped_column(
-        sa.ForeignKey(f"{Seller.__tablename__}.id", ondelete="CASCADE"), index=True
+    seller_id: so.Mapped[SellerId] = so.mapped_column(
+        sa.ForeignKey("sellers.id", ondelete="CASCADE"), index=True
     )
     created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
     updated_at: so.Mapped[datetime] = so.mapped_column(
         server_default=sa.func.now(), onupdate=sa.func.now()
     )
-
-
-class SellerStaff(Base):
-    __tablename__ = "seller_staff"
-    __table_args__ = (sa.PrimaryKeyConstraint("id"),)
-    id: so.Mapped[types.SellerStaffId] = so.mapped_column(autoincrement=True)
-    user_id: so.Mapped[types.UserId] = so.mapped_column(
-        sa.ForeignKey(f"{User.__tablename__}.id", ondelete="CASCADE"), index=True
-    )
-    seller_id: so.Mapped[types.SellerId] = so.mapped_column(
-        sa.ForeignKey(f"{Seller.__tablename__}.id", ondelete="CASCADE"), index=True
-    )
-    role_id: so.Mapped[types.RoleId] = so.mapped_column(
-        sa.ForeignKey(f"{Role.__tablename__}.id", ondelete="SET NULL"), nullable=True
-    )
-    created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
 
 
 class Permission(Base):
@@ -119,8 +93,8 @@ class RolePermission(Base):
 class StaffPermission(Base):
     __tablename__ = "staff_permissions"
     __table_args__ = (sa.PrimaryKeyConstraint("staff_id", "permission_id"),)
-    staff_id: so.Mapped[types.SellerStaffId] = so.mapped_column(
-        sa.ForeignKey(f"{SellerStaff.__tablename__}.id", ondelete="CASCADE"), index=True
+    staff_id: so.Mapped[SellerStaffId] = so.mapped_column(
+        sa.ForeignKey("seller_staff.id", ondelete="CASCADE"), index=True
     )
     permission_id: so.Mapped[types.PermissionId] = so.mapped_column(
         sa.ForeignKey(f"{Permission.__tablename__}.id", ondelete="CASCADE"), index=True
