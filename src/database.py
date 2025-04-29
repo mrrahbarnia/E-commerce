@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 from src.config import settings
 from src.constants import DB_NAMING_CONVENTION
 from src.auth.v1 import types as auth_types
+from src.sellers.v1 import types as sellers_types
 
 async_engine: AsyncEngine = create_async_engine(str(settings.POSTGRES_URL))
 
@@ -24,6 +25,10 @@ class Base(DeclarativeBase, MappedAsDataclass):
         datetime: sql_types.TIMESTAMP(timezone=True),
         auth_types.UserId: sql_types.UUID,
         auth_types.UserIdentityId: sql_types.INTEGER,
+        auth_types.RoleId: sql_types.INTEGER,
+        auth_types.PermissionId: sql_types.INTEGER,
+        sellers_types.SellerId: sql_types.INTEGER,
+        sellers_types.SellerStaffId: sql_types.INTEGER,
     }
 
 

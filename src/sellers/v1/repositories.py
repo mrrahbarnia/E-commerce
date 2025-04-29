@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.sellers.v1 import models
 from src.sellers.v1 import types
-from src.auth.v1.types import UserId
-# from src.auth.v1.models import User
+from src.auth.v1.types import UserId, UserRole
+from src.auth.v1.models import User
 
 logger = logging.getLogger("sellers")
 
@@ -33,6 +33,27 @@ async def create_seller(
             models.Seller.user_id: user_id,
             models.Seller.company_name: company_name,
             models.Seller.is_founder: True,
+        }
+    )
+    await db_session.execute(smtm)
+
+
+async def check_user_is_active_and_role(
+    db_session: AsyncSession, user_id: UserId
+) -> tuple[bool, UserRole] | None:
+    smtm = sa.select(User.is_active, User.role).where(User.id == user_id)
+    return (await db_session.execute(smtm)).tuples().first()
+
+
+async def create_staff_invitation(
+    db_session: AsyncSession,
+    user_id: UserId,
+    seller_id: types.SellerId,
+) -> None:
+    smtm = sa.insert(models.StaffInvitation).values(
+        {
+            models.StaffInvitation.user_id: user_id,
+            models.StaffInvitation.seller_id: seller_id,
         }
     )
     await db_session.execute(smtm)

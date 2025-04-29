@@ -40,7 +40,15 @@ class SellerStaff(Base):
 
 class StaffInvitation(Base):
     __tablename__ = "staff_invitations"
-    __table_args__ = (sa.PrimaryKeyConstraint("user_id", "seller_id"),)
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("user_id", "seller_id"),
+        sa.Index(
+            "uq_user_only_one_accepted",
+            "user_id",
+            unique=True,
+            postgresql_where=sa.text("status = 'ACCEPTED'"),
+        ),
+    )
     user_id: so.Mapped[UserId] = so.mapped_column(
         sa.ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -48,3 +56,7 @@ class StaffInvitation(Base):
         sa.ForeignKey(f"{Seller.__tablename__}.id", ondelete="CASCADE"), index=True
     )
     sent_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
+    status: so.Mapped[types.InvitationStatus] = so.mapped_column(
+        sa.Enum(types.InvitationStatus),
+        default=types.InvitationStatus.PENDING,
+    )
