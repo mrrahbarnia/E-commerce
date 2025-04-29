@@ -19,12 +19,12 @@ async def invite_staff(
 ):
     try:
         async with session_maker.begin() as session:
-            user_info = await repositories.check_user_is_active_and_role(
+            user_info = await repositories.check_staff_status_before_invitation(
                 session, user_id
             )
             if user_info is None:
                 raise exceptions.StaffNotFoundExc
-            is_active, user_role = user_info
+            is_active, user_role, invitation_status = user_info
             if not is_active:
                 raise exceptions.AccountNotActiveForInvitationExc
             elif user_role == UserRole.SELLER:

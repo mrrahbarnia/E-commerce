@@ -33,6 +33,12 @@ router = APIRouter()
                             "summary": "Cannot invite sellers.",
                             "value": {"detail": "cannot invite sellers."},
                         },
+                        "seller-staff-unique": {
+                            "summary": "Cannot invite sellers.",
+                            "value": {
+                                "detail": "Each seller can invite a user only once."
+                            },
+                        },
                     }
                 }
             }
@@ -50,4 +56,4 @@ async def invite_staff(
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     user_id: UserId | None = None,
 ) -> None:
-    await services.invite_staff(session_maker, SellerId(1), user_id)
+    await services.invite_staff(session_maker, SellerId(9), user_id)

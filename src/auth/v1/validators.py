@@ -30,6 +30,8 @@ def ensure_enter_company_name_for_sellers(
 ) -> None:
     if is_seller and not company_name:
         raise ValueError("Sellers must enter their company name.")
+    elif not is_seller and company_name:
+        raise ValueError("Company name must be empty for non-sellers.")
 
 
 def ensure_identity_value_format(value: str) -> str:

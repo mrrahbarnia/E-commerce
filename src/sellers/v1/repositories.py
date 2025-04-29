@@ -38,10 +38,24 @@ async def create_seller(
     await db_session.execute(smtm)
 
 
-async def check_user_is_active_and_role(
+async def check_staff_status_before_invitation(
     db_session: AsyncSession, user_id: UserId
-) -> tuple[bool, UserRole] | None:
-    smtm = sa.select(User.is_active, User.role).where(User.id == user_id)
+) -> tuple[bool, UserRole, types.InvitationStatus] | None:
+    # SELECT u.is_active, u.role, si.status
+    # FROM users u
+    # LEFT JOIN staff_invitations si
+    # ON u.id=si.user_id
+    # WHERE u.id='06a0b637-7475-4ed8-86de-d252162cf650'::UUID
+    smtm = (
+        sa.select(User.is_active, User.role, models.StaffInvitation.status)
+        .select_from(User)
+        .join(
+            models.StaffInvitation,
+            User.id == models.StaffInvitation.user_id,
+            isouter=True,
+        )
+        .where(User.id == user_id)
+    )
     return (await db_session.execute(smtm)).tuples().first()
 
 
