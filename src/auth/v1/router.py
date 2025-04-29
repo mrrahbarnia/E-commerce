@@ -149,7 +149,7 @@ async def activate_account(
 async def resend_verification_code(
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     redis: Annotated[Redis, Depends(redis_conn)],
-    payload: schemas.ResendVerificationCodeIn,
+    payload: schemas.IdentityValueIn,
 ) -> dict:
     """
     - **identity value** must be in correct format.
@@ -267,3 +267,33 @@ async def logout(
     redis: Annotated[Redis, Depends(redis_conn)], refresh_token: str = Cookie(None)
 ) -> None:
     await services.logout(redis, refresh_token)
+
+
+@router.put(
+    "/reset-password/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "There is no account with the provided info."
+                    }
+                }
+            }
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
+async def reset_password(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+    redis: Annotated[Redis, Depends(redis_conn)],
+    payload: schemas.IdentityValueIn,
+) -> None:
+    await services.reset_password(session_maker, redis, payload)

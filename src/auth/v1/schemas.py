@@ -58,7 +58,16 @@ class ActivateAccountIn(BaseModel):
     verification_code: Annotated[str, Field(max_length=6)]
 
 
-class ResendVerificationCodeIn(BaseModel):
+class IdentityValueIn(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "identity_value": "user@example.com",
+                }
+            ]
+        }
+    )
     identity_value: Annotated[
         str, BeforeValidator(validators.ensure_identity_value_format)
     ]

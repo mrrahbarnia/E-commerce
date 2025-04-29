@@ -11,20 +11,18 @@ from src.common.exceptions import CheckDbConnection
 logger = logging.getLogger("auth")
 
 
-async def get_user_id_by_email(
-    db_session: AsyncSession, email: str
-) -> types.UserId | None:
-    smtm = sa.select(models.UserIdentity.user_id).where(
-        models.UserIdentity.identity_value == email
-    )
+async def get_user_by_id(
+    db_session: AsyncSession, user_id: types.UserId
+) -> models.User | None:
+    smtm = sa.select(models.User).where(models.User.id == user_id)
     return await db_session.scalar(smtm)
 
 
-async def get_user_id_by_phone_number(
-    db_session: AsyncSession, phone_number: str
+async def get_user_id_by_identity_value(
+    db_session: AsyncSession, identity_value: str
 ) -> types.UserId | None:
     smtm = sa.select(models.UserIdentity.user_id).where(
-        models.UserIdentity.identity_value == phone_number
+        models.UserIdentity.identity_value == identity_value
     )
     return await db_session.scalar(smtm)
 
@@ -126,6 +124,17 @@ async def activate_user_account(
     smtm = (
         sa.update(models.User)
         .values({models.User.is_active: True})
+        .where(models.User.id == user_id)
+    )
+    await db_session.execute(smtm)
+
+
+async def update_user_password(
+    db_session: AsyncSession, user_id: types.UserId, hashed_password: str
+) -> None:
+    smtm = (
+        sa.update(models.User)
+        .values({models.User.hashed_password: hashed_password})
         .where(models.User.id == user_id)
     )
     await db_session.execute(smtm)

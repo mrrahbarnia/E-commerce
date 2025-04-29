@@ -27,7 +27,7 @@ class InvalidVerificationCodeExc(HTTPException):
 
 class AccountDoesntExistExc(HTTPException):
     def __init__(self) -> None:
-        self.status_code = status.HTTP_401_UNAUTHORIZED
+        self.status_code = status.HTTP_404_NOT_FOUND
         self.detail = "There is no account with the provided info."
 
 

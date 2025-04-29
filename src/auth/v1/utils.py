@@ -30,12 +30,12 @@ def generate_security_stamp() -> str:
     return secrets.token_urlsafe(8)
 
 
-def send_sms():
-    logger.warning("Sending sms.")
+def send_sms(content: str):
+    logger.critical(f"Sending sms. {content}")
 
 
-def send_email():
-    logger.warning("Sending email.")
+def send_email(content: str):
+    logger.critical(f"Sending email. {content}")
 
 
 def encode_access_token(payload: dict[str, Any]) -> str:

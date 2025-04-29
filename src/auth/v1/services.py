@@ -26,16 +26,17 @@ async def register(
 ) -> None:
     try:
         async with session_maker.begin() as session:
+            user_id: (
+                types.UserId | None
+            ) = await repositories.get_user_id_by_identity_value(
+                session, payload.identity_value
+            )
             match payload.identity_type:
                 case types.IdentityType.EMAIL:
-                    if await repositories.get_user_id_by_email(
-                        session, payload.identity_value
-                    ):
+                    if user_id:
                         raise exceptions.DuplicateEmailExc
                 case types.IdentityType.PHONE_NUMBER:
-                    if await repositories.get_user_id_by_phone_number(
-                        session, payload.identity_value
-                    ):
+                    if user_id:
                         raise exceptions.DuplicatePhoneNumberExc
                 case _:
                     assert_never(payload.identity_type)
@@ -110,7 +111,7 @@ async def activate_account(
 async def resend_verification_code(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
-    payload: schemas.ResendVerificationCodeIn,
+    payload: schemas.IdentityValueIn,
 ):
     async with session_maker.begin() as session:
         user_info: (
@@ -134,9 +135,13 @@ async def resend_verification_code(
             )
             match payload.identity_type:
                 case types.IdentityType.EMAIL:
-                    utils.send_email()  # TODO: Sending email in production mode.
+                    utils.send_email(
+                        verification_code
+                    )  # TODO: Sending email in production mode.
                 case types.IdentityType.PHONE_NUMBER:
-                    utils.send_sms()  # TODO: Sending SMS in production mode.
+                    utils.send_sms(
+                        verification_code
+                    )  # TODO: Sending SMS in production mode.
 
 
 async def login(
@@ -240,3 +245,39 @@ async def logout(redis: Redis, refresh_token: str) -> None:
     await get_del_cached_value(
         redis, f"security-stamp:{payload['security_stamp']}"
     )  # Deleting security stamp from cache.
+
+
+async def reset_password(
+    session_maker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    payload: schemas.IdentityValueIn,
+):
+    try:
+        async with session_maker.begin() as session:
+            user_id: (
+                types.UserId | None
+            ) = await repositories.get_user_id_by_identity_value(
+                session, payload.identity_value
+            )
+            if not user_id:
+                raise exceptions.AccountDoesntExistExc
+            new_password = utils.generate_random_code(8)
+            new_hashed_password = utils.hash_password(new_password)
+            await repositories.update_user_password(
+                session, user_id, new_hashed_password
+            )
+            match payload.identity_type():
+                case types.IdentityType.EMAIL:
+                    utils.send_email(new_password)
+                case types.IdentityType.PHONE_NUMBER:
+                    utils.send_sms(new_password)
+                case _:
+                    assert_never(payload.identity_type())
+
+    except exceptions.AccountDoesntExistExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
+        raise CheckDbConnection
