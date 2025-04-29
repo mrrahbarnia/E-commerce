@@ -43,7 +43,7 @@ class RegisterIn(RegisterOut):
     @model_validator(mode="after")
     def validate_model(self):
         validators.validate_password(self.password)
-        validators.validate_passwords_matchness(self.password, self.confirm_password)
+        validators.validate_passwords_match(self.password, self.confirm_password)
         validators.validate_identity_value_based_on_identity_type(
             self.identity_type, self.identity_value
         )
@@ -81,6 +81,29 @@ class IdentityValueIn(BaseModel):
 class Token(BaseModel):
     access_token: str
     refresh_token: str
+
+
+class ChangePasswordIn(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "old_password": "12345678",
+                    "new_password": "123456789",
+                    "confirm_password": "123456789",
+                }
+            ]
+        }
+    )
+    old_password: str
+    new_password: str
+    confirm_password: str
+
+    @model_validator(mode="after")
+    def validate_model(self):
+        validators.validate_password(self.new_password)
+        validators.validate_passwords_match(self.new_password, self.confirm_password)
+        return self
 
 
 # class UsersOut(BaseModel):

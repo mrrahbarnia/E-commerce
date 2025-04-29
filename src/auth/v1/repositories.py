@@ -18,6 +18,13 @@ async def get_user_by_id(
     return await db_session.scalar(smtm)
 
 
+async def get_user_passwd_by_id(
+    db_session: AsyncSession, user_id: types.UserId
+) -> str | None:
+    smtm = sa.select(models.User.hashed_password).where(models.User.id == user_id)
+    return await db_session.scalar(smtm)
+
+
 async def get_user_id_by_identity_value(
     db_session: AsyncSession, identity_value: str
 ) -> types.UserId | None:

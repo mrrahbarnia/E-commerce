@@ -26,7 +26,7 @@ class TokenPayload(TypedDict):
     security_stamp: str
 
 
-def decode_token(token: str) -> TokenPayload:
+def _decode_token(token: str) -> TokenPayload:
     try:
         payload: TokenPayload = jwt.decode(
             jwt=token,
@@ -48,8 +48,18 @@ def decode_token(token: str) -> TokenPayload:
         raise exceptions.InvalidTokenExc
 
 
+def decode_access_token(
+    access_token: Annotated[str, Depends(oauth2_schema)],
+) -> TokenPayload:
+    return _decode_token(access_token)
+
+
+def decode_refresh_token(refresh_token: str) -> TokenPayload:
+    return _decode_token(refresh_token)
+
+
 async def get_current_active_user(
-    data: Annotated[TokenPayload, Depends(decode_token)],
+    data: Annotated[TokenPayload, Depends(decode_access_token)],
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
 ) -> User:
     if "user_id" not in data:

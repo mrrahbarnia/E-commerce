@@ -10,6 +10,8 @@ from src.database import session_maker, redis_conn
 from src.auth.v1 import schemas
 from src.auth.v1 import services
 from src.auth.v1.config import auth_config
+from src.auth.v1.models import User
+from src.auth.v1.dependencies import get_current_active_user
 
 router = APIRouter()
 
@@ -297,3 +299,32 @@ async def reset_password(
     payload: schemas.IdentityValueIn,
 ) -> None:
     await services.reset_password(session_maker, redis, payload)
+
+
+@router.put(
+    "/change-password/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        400: {
+            "content": {
+                "application/json": {
+                    "example": {"access_token": "Old password is incorrect."}
+                }
+            }
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
+async def change_password(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+    redis: Annotated[Redis, Depends(redis_conn)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    payload: schemas.ChangePasswordIn,
+) -> None:
+    await services.change_password(session_maker, redis, current_user.id, payload)

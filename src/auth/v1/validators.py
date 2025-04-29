@@ -4,7 +4,7 @@ from src.auth.v1 import types
 from src.auth.v1.config import auth_config
 
 
-def validate_passwords_matchness(password: str, confirm_password: str) -> None:
+def validate_passwords_match(password: str, confirm_password: str) -> None:
     if password != confirm_password:
         raise ValueError("Passwords don't match!")
 

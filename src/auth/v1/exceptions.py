@@ -59,3 +59,9 @@ class ExpiredTokenExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_401_UNAUTHORIZED
         self.detail = "Token has been expired."
+
+
+class WrongOldPasswordExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "Old password is incorrect."

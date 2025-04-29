@@ -3,14 +3,14 @@ from typing import assert_never
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
+from fastapi import HTTPException
 
 from src.auth.v1 import schemas
 from src.auth.v1 import types
 from src.auth.v1 import repositories
 from src.auth.v1 import exceptions
 from src.auth.v1 import utils
-from src.auth.v1.dependencies import decode_token
+from src.auth.v1.dependencies import decode_refresh_token
 from src.auth.v1.config import auth_config
 from src.common.exceptions import CheckDbConnection
 from src.common.repositories import set_key_to_cache, get_del_cached_value
@@ -211,7 +211,7 @@ async def login(
 async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
     if await get_del_cached_value(redis, refresh_token) is None:
         raise exceptions.InvalidTokenExc
-    payload = decode_token(refresh_token)
+    payload = decode_refresh_token(refresh_token)
     # Generating security stamp, storing it in cache and decoding it into the access token.
     await set_key_to_cache(
         redis,
@@ -241,7 +241,7 @@ async def logout(redis: Redis, refresh_token: str) -> None:
     await get_del_cached_value(
         redis, refresh_token
     )  # Deleting refresh token from cache.
-    payload = decode_token(refresh_token)
+    payload = decode_refresh_token(refresh_token)
     await get_del_cached_value(
         redis, f"security-stamp:{payload['security_stamp']}"
     )  # Deleting security stamp from cache.
@@ -275,6 +275,38 @@ async def reset_password(
                     assert_never(payload.identity_type())
 
     except exceptions.AccountDoesntExistExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
+        raise CheckDbConnection
+
+
+async def change_password(
+    session_maker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    user_id: types.UserId,
+    payload: schemas.ChangePasswordIn,
+) -> None:
+    try:
+        async with session_maker.begin() as session:
+            hashed_password = await repositories.get_user_passwd_by_id(session, user_id)
+            if not hashed_password:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Unexpected error",
+                )
+
+            if not utils.verify_password(payload.old_password, hashed_password):
+                raise exceptions.WrongOldPasswordExc
+
+            new_hashed_password = utils.hash_password(payload.new_password)
+            await repositories.update_user_password(
+                session, user_id, new_hashed_password
+            )
+
+    except exceptions.WrongOldPasswordExc as ex:
         logger.info(ex)
         raise ex
 
