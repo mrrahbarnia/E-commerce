@@ -21,6 +21,22 @@ router = APIRouter()
         404: {
             "content": {"application/json": {"example": {"detail": "Staff not found."}}}
         },
+        400: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "account-not-active": {
+                            "summary": "Account not active.",
+                            "value": {"detail": "This account is not active."},
+                        },
+                        "cannot-invite-sellers": {
+                            "summary": "Cannot invite sellers.",
+                            "value": {"detail": "cannot invite sellers."},
+                        },
+                    }
+                }
+            }
+        },
         500: {
             "content": {
                 "application/json": {
