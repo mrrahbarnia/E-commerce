@@ -32,9 +32,6 @@ class SellerStaff(Base):
     seller_id: so.Mapped[types.SellerId] = so.mapped_column(
         sa.ForeignKey("sellers.id", ondelete="CASCADE"), index=True
     )
-    role_id: so.Mapped[RoleId] = so.mapped_column(
-        sa.ForeignKey("roles.id", ondelete="SET NULL"), nullable=True
-    )
     created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
 
 
@@ -59,4 +56,15 @@ class StaffInvitation(Base):
     status: so.Mapped[types.InvitationStatus] = so.mapped_column(
         sa.Enum(types.InvitationStatus),
         default=types.InvitationStatus.PENDING,
+    )
+
+
+class SellerStaffRole(Base):
+    __tablename__ = "seller_staff_roles"
+    __table_args__ = (sa.PrimaryKeyConstraint("seller_staff_id", "role_id"),)
+    seller_staff_id: so.Mapped[types.SellerStaffId] = so.mapped_column(
+        sa.ForeignKey(f"{SellerStaff.__tablename__}.id", ondelete="CASCADE"), index=True
+    )
+    role_id: so.Mapped[RoleId] = so.mapped_column(
+        sa.ForeignKey("roles.id", ondelete="CASCADE"), index=True
     )

@@ -25,6 +25,7 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl="/v1/auth/login/")
 class TokenPayload(TypedDict):
     exp: int
     user_id: UserId
+    is_founder: bool | None
     security_stamp: str
 
 
@@ -83,3 +84,15 @@ async def get_current_active_user(
         if not user.is_active:
             raise exceptions.AccountNotActiveExc
         return user
+
+
+# async def is_founder(data: Annotated[TokenPayload, Depends(decode_access_token)]) -> bool:
+#     if "user_id" not in data:
+#         raise exceptions.InvalidTokenExc
+#     user_id = data.get("user_id")
+#     assert user_id is not None
+#     async with session_maker.begin() as session:
+#         user = await repositories.get_user_by_id(session, user_id)
+#         if user is None:
+#             raise exceptions.InvalidTokenExc
+#         return user.is_founder
