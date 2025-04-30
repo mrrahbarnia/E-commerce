@@ -1,4 +1,4 @@
--- Added check constraint on user_identities table
+*** Added check constraint on user_identities table ***
 
 ALTER TABLE user_identities
 ADD CONSTRAINT check_identity_type_identity_value
@@ -7,3 +7,6 @@ CHECK (
   OR
   (identity_type = 'PHONE_NUMBER' AND identity_value ~* '^[0-9]{11}$')
 );
+
+
+*** Rotate refresh tokens every 3 months ***

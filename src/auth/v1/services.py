@@ -12,9 +12,13 @@ from src.auth.v1 import exceptions
 from src.auth.v1 import utils
 from src.auth.v1.dependencies import decode_refresh_token
 from src.auth.v1.config import auth_config
-from src.common.exceptions import CheckDbConnection
-from src.common.repositories import set_key_to_cache, get_del_cached_value
 from src.sellers.v1 import repositories as seller_repositories
+from src.common.exceptions import CheckDbConnection
+from src.common.repositories import (
+    set_key_to_cache,
+    get_del_cached_value,
+    del_cache_key_by_regex_pattern,
+)
 
 logger = logging.getLogger("auth")
 
@@ -173,7 +177,7 @@ async def login(
                 security_stamp = utils.generate_security_stamp()
                 await set_key_to_cache(
                     redis,
-                    f"security-stamp:{security_stamp}",
+                    f"security-stamp:{user_id}:{security_stamp}",
                     str(user_id),
                     auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
                 )
@@ -215,7 +219,7 @@ async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
     # Generating security stamp, storing it in cache and decoding it into the access token.
     await set_key_to_cache(
         redis,
-        f"security-stamp:{payload['security_stamp']}",
+        f"security-stamp:{payload['user_id']}:{payload['security_stamp']}",
         str(payload["user_id"]),
         auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
     )
@@ -243,7 +247,7 @@ async def logout(redis: Redis, refresh_token: str) -> None:
     )  # Deleting refresh token from cache.
     payload = decode_refresh_token(refresh_token)
     await get_del_cached_value(
-        redis, f"security-stamp:{payload['security_stamp']}"
+        redis, f"security-stamp:{payload['user_id']}:{payload['security_stamp']}"
     )  # Deleting security stamp from cache.
 
 
@@ -251,7 +255,7 @@ async def reset_password(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
     payload: schemas.IdentityValueIn,
-):
+) -> None:
     try:
         async with session_maker.begin() as session:
             user_id: (
@@ -273,6 +277,12 @@ async def reset_password(
                     utils.send_sms(new_password)
                 case _:
                     assert_never(payload.identity_type())
+
+            # Deleting security stamp from cache.
+            await del_cache_key_by_regex_pattern(
+                redis,
+                f"security-stamp:{user_id}:*",
+            )
 
     except exceptions.AccountDoesntExistExc as ex:
         logger.info(ex)

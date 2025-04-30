@@ -8,3 +8,9 @@ async def set_key_to_cache(redis: Redis, name: str, value: str, ex: int) -> None
 
 async def get_del_cached_value(redis: Redis, name: str) -> Any:
     return await redis.getdel(name=name)
+
+
+async def del_cache_key_by_regex_pattern(redis: Redis, pattern: str) -> None:
+    keys = await redis.keys(pattern=pattern)
+    if keys:
+        await redis.delete(*keys)
