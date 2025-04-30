@@ -71,7 +71,9 @@ async def get_current_active_user(
     assert user_id is not None
     security_stamp = data.get("security_stamp")  # Check security stamp validity
     if (not security_stamp) or (
-        not get_value_from_cache(redis, f"security-stamp:{user_id}:{security_stamp}")
+        not await get_value_from_cache(
+            redis, f"security-stamp:{user_id}:{security_stamp}"
+        )
     ):
         raise exceptions.SecurityStampChangedExc
     async with session_maker.begin() as session:

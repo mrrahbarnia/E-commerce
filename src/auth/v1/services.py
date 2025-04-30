@@ -336,6 +336,12 @@ async def change_password(
             refresh_token = utils.encode_refresh_token(
                 {"user_id": str(user_id), "security_stamp": security_stamp}
             )
+            await set_key_to_cache(
+                redis,
+                refresh_token,
+                str(user_id),
+                auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+            )
             return schemas.Token(access_token=access_token, refresh_token=refresh_token)
 
     except exceptions.WrongOldPasswordExc as ex:

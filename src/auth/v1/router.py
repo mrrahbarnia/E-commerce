@@ -304,7 +304,7 @@ async def reset_password(
 @router.put(
     "/change-password/",
     status_code=status.HTTP_200_OK,
-    # response_model=schemas.ChangePasswordOut,
+    response_model=schemas.ChangePasswordOut,
     responses={
         200: {
             "content": {
@@ -346,18 +346,16 @@ async def change_password(
     payload: schemas.ChangePasswordIn,
     refresh_token: str = Cookie(None),
 ):
-    print(refresh_token)
-    return "OK"
-    # tokens = await services.change_password(
-    #     session_maker, redis, current_user.id, payload, refresh_token
-    # )
-    # response.set_cookie(
-    #     key="refresh_token",
-    #     value=tokens.refresh_token,
-    #     httponly=True,
-    #     secure=True if settings.ENVIRONMENT == "PRODUCTION" else False,
-    #     samesite="strict" if settings.ENVIRONMENT == "PRODUCTION" else "none",
-    #     max_age=auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
-    #     path="/",
-    # )
-    # return {"access_token": tokens.access_token}
+    tokens = await services.change_password(
+        session_maker, redis, current_user.id, payload, refresh_token
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        secure=True if settings.ENVIRONMENT == "PRODUCTION" else False,
+        samesite="strict" if settings.ENVIRONMENT == "PRODUCTION" else "none",
+        max_age=auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+        path="/",
+    )
+    return {"access_token": tokens.access_token}
