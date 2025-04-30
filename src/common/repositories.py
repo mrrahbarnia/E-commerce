@@ -10,6 +10,13 @@ async def get_del_cached_value(redis: Redis, name: str) -> Any:
     return await redis.getdel(name=name)
 
 
+async def get_value_from_cache(redis: Redis, key: str) -> str | None:
+    value = await redis.get(key)
+    if value is None:
+        return None
+    return value
+
+
 async def del_cache_key_by_regex_pattern(redis: Redis, pattern: str) -> None:
     keys = await redis.keys(pattern=pattern)
     if keys:

@@ -106,6 +106,17 @@ class ChangePasswordIn(BaseModel):
         return self
 
 
+class ChangePasswordOut(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V"}
+            ]
+        }
+    )
+    access_token: str
+
+
 # class UsersOut(BaseModel):
 #     id: types.UserId
 #     username: str

@@ -298,7 +298,8 @@ async def change_password(
     redis: Redis,
     user_id: types.UserId,
     payload: schemas.ChangePasswordIn,
-) -> None:
+    refresh_token: str,
+) -> schemas.Token:
     try:
         async with session_maker.begin() as session:
             hashed_password = await repositories.get_user_passwd_by_id(session, user_id)
@@ -315,6 +316,27 @@ async def change_password(
             await repositories.update_user_password(
                 session, user_id, new_hashed_password
             )
+
+            # Regenerating security stamp, storing it in cache, deleting previous security stamp and decoding it into the access token and refresh token.
+            await del_cache_key_by_regex_pattern(
+                redis,
+                f"security-stamp:{user_id}:*",
+            )
+            await get_del_cached_value(redis, refresh_token)
+            security_stamp = utils.generate_security_stamp()
+            await set_key_to_cache(
+                redis,
+                f"security-stamp:{user_id}:{security_stamp}",
+                str(user_id),
+                auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
+            )
+            access_token = utils.encode_access_token(
+                {"user_id": str(user_id), "security_stamp": security_stamp}
+            )
+            refresh_token = utils.encode_refresh_token(
+                {"user_id": str(user_id), "security_stamp": security_stamp}
+            )
+            return schemas.Token(access_token=access_token, refresh_token=refresh_token)
 
     except exceptions.WrongOldPasswordExc as ex:
         logger.info(ex)

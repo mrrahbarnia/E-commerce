@@ -303,12 +303,29 @@ async def reset_password(
 
 @router.put(
     "/change-password/",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
+    # response_model=schemas.ChangePasswordOut,
     responses={
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V"
+                    }
+                }
+            }
+        },
         400: {
             "content": {
                 "application/json": {
                     "example": {"access_token": "Old password is incorrect."}
+                }
+            }
+        },
+        403: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Security stamp changed,login again."}
                 }
             }
         },
@@ -322,9 +339,25 @@ async def reset_password(
     },
 )
 async def change_password(
+    response: Response,
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     redis: Annotated[Redis, Depends(redis_conn)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     payload: schemas.ChangePasswordIn,
-) -> None:
-    await services.change_password(session_maker, redis, current_user.id, payload)
+    refresh_token: str = Cookie(None),
+):
+    print(refresh_token)
+    return "OK"
+    # tokens = await services.change_password(
+    #     session_maker, redis, current_user.id, payload, refresh_token
+    # )
+    # response.set_cookie(
+    #     key="refresh_token",
+    #     value=tokens.refresh_token,
+    #     httponly=True,
+    #     secure=True if settings.ENVIRONMENT == "PRODUCTION" else False,
+    #     samesite="strict" if settings.ENVIRONMENT == "PRODUCTION" else "none",
+    #     max_age=auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+    #     path="/",
+    # )
+    # return {"access_token": tokens.access_token}
