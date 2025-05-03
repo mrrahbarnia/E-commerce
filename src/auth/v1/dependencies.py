@@ -13,7 +13,7 @@ from src.database import session_maker, redis_conn
 from src.auth.v1 import exceptions
 from src.auth.v1 import repositories
 from src.auth.v1.config import auth_config
-from src.auth.v1.types import UserId
+from src.auth.v1.types import UserId, UserRole
 from src.auth.v1.models import User
 from src.common.repositories import get_value_from_cache
 
@@ -61,28 +61,42 @@ def decode_refresh_token(refresh_token: str) -> TokenPayload:
     return _decode_token(refresh_token)
 
 
-async def get_current_active_user(
-    data: Annotated[TokenPayload, Depends(decode_access_token)],
-    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+async def check_security_stamp(
+    token_data: Annotated[TokenPayload, Depends(decode_access_token)],
     redis: Annotated[Redis, Depends(redis_conn)],
-) -> User:
-    if "user_id" not in data:
+) -> TokenPayload:
+    if "user_id" not in token_data:
         raise exceptions.InvalidTokenExc
-    user_id = data.get("user_id")
+    user_id = token_data.get("user_id")
     assert user_id is not None
-    security_stamp = data.get("security_stamp")  # Check security stamp validity
+    security_stamp = token_data.get("security_stamp")  # Check security stamp validity
     if (not security_stamp) or (
         not await get_value_from_cache(
             redis, f"security-stamp:{user_id}:{security_stamp}"
         )
     ):
         raise exceptions.SecurityStampChangedExc
+    return token_data
+
+
+async def get_user_id(
+    token_data: Annotated[TokenPayload, Depends(check_security_stamp)],
+) -> UserId:
+    return token_data["user_id"]
+
+
+async def get_admin_user(
+    token_data: Annotated[TokenPayload, Depends(check_security_stamp)],
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+) -> User:
     async with session_maker.begin() as session:
-        user = await repositories.get_user_by_id(session, user_id)
+        user = await repositories.get_user_by_id(session, token_data["user_id"])
         if user is None:
             raise exceptions.InvalidTokenExc
         if not user.is_active:
             raise exceptions.AccountNotActiveExc
+        if user.role != UserRole.ADMIN:
+            raise exceptions.UserNotAdminExc
         return user
 
 

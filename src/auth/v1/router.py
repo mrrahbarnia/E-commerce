@@ -10,8 +10,8 @@ from src.database import session_maker, redis_conn
 from src.auth.v1 import schemas
 from src.auth.v1 import services
 from src.auth.v1.config import auth_config
-from src.auth.v1.models import User
-from src.auth.v1.dependencies import get_current_active_user
+from src.auth.v1.types import UserId
+from src.auth.v1.dependencies import get_user_id
 
 router = APIRouter()
 
@@ -341,12 +341,12 @@ async def change_password(
     response: Response,
     session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
     redis: Annotated[Redis, Depends(redis_conn)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    user_id: Annotated[UserId, Depends(get_user_id)],
     payload: schemas.ChangePasswordIn,
     refresh_token: str = Cookie(None),
 ):
     tokens = await services.change_password(
-        session_maker, redis, current_user.id, payload, refresh_token
+        session_maker, redis, user_id, payload, refresh_token
     )
     response.set_cookie(
         key="refresh_token",
