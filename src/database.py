@@ -27,7 +27,7 @@ class Base(DeclarativeBase, MappedAsDataclass):
         auth_types.UserIdentityId: sql_types.INTEGER,
         auth_types.RoleId: sql_types.INTEGER,
         auth_types.PermissionId: sql_types.INTEGER,
-        sellers_types.ProviderId: sql_types.INTEGER,
+        sellers_types.ProviderId: sql_types.UUID,
         sellers_types.ProviderStaffId: sql_types.INTEGER,
     }
 

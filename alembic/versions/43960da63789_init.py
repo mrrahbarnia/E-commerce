@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 633fa8eb55fe
+Revision ID: 43960da63789
 Revises: 
-Create Date: 2025-05-03 06:08:47.120239
+Create Date: 2025-05-03 08:02:24.591637
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '633fa8eb55fe'
+revision: str = '43960da63789'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,7 +34,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.INTEGER(), nullable=False),
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_providers'))
     )
     op.create_table('users',
@@ -47,7 +47,7 @@ def upgrade() -> None:
     )
     op.create_table('provider_invitations',
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('provider_id', sa.INTEGER(), nullable=False),
+    sa.Column('provider_id', sa.UUID(), nullable=False),
     sa.Column('sent_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'CANCELED', name='invitationstatus'), nullable=False),
     sa.ForeignKeyConstraint(['provider_id'], ['providers.id'], name=op.f('fk_provider_invitations_provider_id_providers'), ondelete='CASCADE'),
@@ -60,7 +60,7 @@ def upgrade() -> None:
     op.create_table('provider_staff',
     sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('provider_id', sa.INTEGER(), nullable=False),
+    sa.Column('provider_id', sa.UUID(), nullable=False),
     sa.Column('joined_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('is_founder', sa.Boolean(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
@@ -75,7 +75,7 @@ def upgrade() -> None:
     sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('provider_id', sa.INTEGER(), nullable=False),
+    sa.Column('provider_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['provider_id'], ['providers.id'], name=op.f('fk_roles_provider_id_providers'), ondelete='CASCADE'),
@@ -85,7 +85,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_roles_provider_id'), 'roles', ['provider_id'], unique=False)
     op.create_table('staff_invitations',
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('provider_id', sa.INTEGER(), nullable=False),
+    sa.Column('provider_id', sa.UUID(), nullable=False),
     sa.Column('sent_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'CANCELED', name='invitationstatus'), nullable=False),
     sa.ForeignKeyConstraint(['provider_id'], ['providers.id'], name=op.f('fk_staff_invitations_provider_id_providers'), ondelete='CASCADE'),
