@@ -35,15 +35,15 @@ async def get_user_id_by_identity_value(
 
 
 async def create_user(
-    db_session: AsyncSession, hashed_password: str, is_seller: bool
+    db_session: AsyncSession, hashed_password: str, is_provider: bool
 ) -> types.UserId:
     smtm = (
         sa.insert(models.User)
         .values(
             {
                 models.User.role: types.UserRole.CUSTOMER
-                if not is_seller
-                else types.UserRole.SELLER,
+                if not is_provider
+                else types.UserRole.PROVIDER,
                 models.User.hashed_password: hashed_password,
             }
         )
@@ -84,7 +84,7 @@ async def get_user_credentials_by_identity_value(
     return (await db_session.execute(smtm)).tuples().first()
 
 
-# async def get_user_roles()
+# # async def get_user_roles()
 
 
 async def create_user_identity(

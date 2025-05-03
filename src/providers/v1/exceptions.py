@@ -23,3 +23,9 @@ class SellerStaffUniqueExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_400_BAD_REQUEST
         self.detail = "Each seller can invite a user only once."
+
+
+class StaffAlreadyAtWorkExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "This user is already working for another provider."

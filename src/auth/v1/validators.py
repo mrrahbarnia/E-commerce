@@ -25,12 +25,12 @@ def validate_identity_value_based_on_identity_type(
             raise ValueError("Phone number must be exact 11 digits!")
 
 
-def ensure_enter_company_name_for_sellers(
-    is_seller: bool | None, company_name: str | None
+def ensure_enter_company_name_for_providers(
+    is_provider: bool | None, company_name: str | None
 ) -> None:
-    if is_seller and not company_name:
+    if is_provider and not company_name:
         raise ValueError("Sellers must enter their company name.")
-    elif not is_seller and company_name:
+    elif not is_provider and company_name:
         raise ValueError("Company name must be empty for non-sellers.")
 
 

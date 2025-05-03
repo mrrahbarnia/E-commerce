@@ -1,8 +1,8 @@
 from typing import NewType
 from enum import StrEnum, auto
 
-SellerId = NewType("SellerId", int)
-SellerStaffId = NewType("SellerStaffId", int)
+ProviderId = NewType("ProviderId", int)
+ProviderStaffId = NewType("ProviderStaffId", int)
 
 
 class InvitationStatus(StrEnum):

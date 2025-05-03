@@ -11,7 +11,7 @@ PermissionId = NewType("PermissionId", int)
 class UserRole(StrEnum):
     ADMIN = auto()
     CUSTOMER = auto()
-    SELLER = auto()
+    PROVIDER = auto()
 
 
 class IdentityType(StrEnum):

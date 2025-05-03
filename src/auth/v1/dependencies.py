@@ -86,7 +86,7 @@ async def get_current_active_user(
         return user
 
 
-# async def is_founder(data: Annotated[TokenPayload, Depends(decode_access_token)]) -> bool:
+# async def get_current_active_founder(data: Annotated[TokenPayload, Depends(decode_access_token)]) -> bool:
 #     if "user_id" not in data:
 #         raise exceptions.InvalidTokenExc
 #     user_id = data.get("user_id")

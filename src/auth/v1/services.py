@@ -12,7 +12,8 @@ from src.auth.v1 import exceptions
 from src.auth.v1 import utils
 from src.auth.v1.dependencies import decode_refresh_token
 from src.auth.v1.config import auth_config
-from src.sellers.v1 import repositories as seller_repositories
+from src.providers.v1 import repositories as provider_repositories
+from src.providers.v1.types import ProviderId
 from src.common.exceptions import CheckDbConnection
 from src.common.repositories import (
     set_key_to_cache,
@@ -47,9 +48,9 @@ async def register(
             user_id = await repositories.create_user(  # Side effects: CheckDbConnection
                 session,
                 utils.hash_password(payload.password),
-                True if payload.is_seller else False,
+                True if payload.is_provider else False,
             )
-            await repositories.create_user_identity(  # Side effects: CheckDbConnection
+            await repositories.create_user_identity(
                 db_session=session,
                 user_id=user_id,
                 identity_type=payload.identity_type,
@@ -58,12 +59,22 @@ async def register(
                 username=payload.username,
                 avatar=payload.avatar,
             )
-            if payload.is_seller:
+            if payload.is_provider:
                 assert (
                     payload.company_name is not None
                 )  # Because of validator layer on top of schemas.
-                await seller_repositories.create_seller(
-                    session, user_id, payload.company_name
+                provider_id: (
+                    ProviderId | None
+                ) = await provider_repositories.create_provider(
+                    session, payload.company_name
+                )
+                if not provider_id:
+                    raise CheckDbConnection
+                await provider_repositories.create_provider_staff(
+                    db_session=session,
+                    provider_id=provider_id,
+                    user_id=user_id,
+                    is_founder=True,
                 )
         verification_code = utils.generate_random_code(6)
         await set_key_to_cache(
@@ -72,6 +83,7 @@ async def register(
             value=str(user_id),
             ex=auth_config.VERIFY_ACCOUNT_MESSAGE_LIFETIME_SEC,
         )
+        # TODO: Sending email or sms in production mode.
 
     except exceptions.DuplicateEmailExc as ex:
         logger.info(ex)
@@ -93,7 +105,7 @@ async def activate_account(
     session_maker: async_sessionmaker[AsyncSession],
     redis: Redis,
     verification_code: str,
-):
+) -> None:
     user_id = await get_del_cached_value(
         redis=redis, name=f"verification-code:{verification_code}"
     )

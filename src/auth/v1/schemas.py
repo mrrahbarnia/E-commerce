@@ -25,7 +25,7 @@ class RegisterIn(RegisterOut):
                     "full_name": "Mohammadreza rahbarnia",
                     "username": "mrrahbarnia",
                     "avatar": "https://example.com/pic.jpg",
-                    "is_seller": True,
+                    "is_provider": True,
                     "company_name": "Mobl Iran",
                 }
             ]
@@ -37,7 +37,7 @@ class RegisterIn(RegisterOut):
     confirm_password: str
     full_name: Annotated[str, Field(max_length=200)]
     avatar: Annotated[str, Field(max_length=200)]
-    is_seller: bool | None = None
+    is_provider: bool | None = None
     company_name: Annotated[str | None, Field(max_length=200)] = None
 
     @model_validator(mode="after")
@@ -47,8 +47,8 @@ class RegisterIn(RegisterOut):
         validators.validate_identity_value_based_on_identity_type(
             self.identity_type, self.identity_value
         )
-        validators.ensure_enter_company_name_for_sellers(
-            self.is_seller, self.company_name
+        validators.ensure_enter_company_name_for_providers(
+            self.is_provider, self.company_name
         )
 
         return self

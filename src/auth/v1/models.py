@@ -6,7 +6,7 @@ import sqlalchemy as sa
 
 from src.database import Base
 from src.auth.v1 import types
-from src.sellers.v1.types import SellerId, SellerStaffId
+from src.providers.v1.types import ProviderId
 
 
 class User(Base):
@@ -48,14 +48,14 @@ class Role(Base):
     __table_args__ = (
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "seller_id", "name", name="uq_role_seller_name"
+            "provider_id", "name", name="uq_role_provider_name"
         ),  # Because "Manager" role in Seller A shouldn't conflict with "Manager" role in Seller B.
     )
     id: so.Mapped[types.RoleId] = so.mapped_column(autoincrement=True)
     name: so.Mapped[str] = so.mapped_column(sa.String(200))
     description: so.Mapped[str] = so.mapped_column(sa.Text)
-    seller_id: so.Mapped[SellerId] = so.mapped_column(
-        sa.ForeignKey("sellers.id", ondelete="CASCADE"), index=True
+    provider_id: so.Mapped[ProviderId] = so.mapped_column(
+        sa.ForeignKey("providers.id", ondelete="CASCADE"), index=True
     )
     created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
     updated_at: so.Mapped[datetime] = so.mapped_column(
@@ -84,17 +84,6 @@ class RolePermission(Base):
     __table_args__ = (sa.PrimaryKeyConstraint("role_id", "permission_id"),)
     role_id: so.Mapped[types.RoleId] = so.mapped_column(
         sa.ForeignKey(f"{Role.__tablename__}.id", ondelete="CASCADE"), index=True
-    )
-    permission_id: so.Mapped[types.PermissionId] = so.mapped_column(
-        sa.ForeignKey(f"{Permission.__tablename__}.id", ondelete="CASCADE"), index=True
-    )
-
-
-class StaffPermission(Base):
-    __tablename__ = "staff_permissions"
-    __table_args__ = (sa.PrimaryKeyConstraint("staff_id", "permission_id"),)
-    staff_id: so.Mapped[SellerStaffId] = so.mapped_column(
-        sa.ForeignKey("seller_staff.id", ondelete="CASCADE"), index=True
     )
     permission_id: so.Mapped[types.PermissionId] = so.mapped_column(
         sa.ForeignKey(f"{Permission.__tablename__}.id", ondelete="CASCADE"), index=True

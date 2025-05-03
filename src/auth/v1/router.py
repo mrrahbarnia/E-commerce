@@ -71,7 +71,7 @@ async def register(
     - **confirm passwords** must be match password.
     - **username** must be at least 200 chars.
     - **full_name** must be at least 200 chars.
-    - **company_name** If is_seller is set to true then company_name is mandatory and must at least 200 chars.
+    - **company_name** If is_provider is set to true then company_name is mandatory and must at least 200 chars.
     """
     await services.register(session_maker, redis, payload)
     return {"username": payload.username, "identity_value": payload.identity_value}
@@ -132,7 +132,6 @@ async def activate_account(
             }
         },
         401: {
-            "description": "The user has been already activated.",
             "content": {
                 "application/json": {
                     "example": {"detail": "Account has already been activated."}
