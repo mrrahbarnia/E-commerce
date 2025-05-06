@@ -1,7 +1,6 @@
 from typing import Any
 
 from dotenv import load_dotenv
-from pythonjsonlogger import jsonlogger  # noqa
 from pydantic import BaseModel, PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,7 +33,7 @@ class LogConfig(BaseModel):
             "datefmt": "%Y-%m-%dT%H:%M:%SZ",
         },
         "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "()": "pythonjsonlogger.json.JsonFormatter",
             "fmt": "%(asctime)s %(levelname)s %(module)s %(funcName)s %(message)s",
             "datefmt": "%Y-%m-%dT%H:%M:%SZ",
         },

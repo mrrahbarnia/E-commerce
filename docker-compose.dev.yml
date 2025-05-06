@@ -3,6 +3,8 @@ services:
   app:
     build: 
       context: .
+      dockerfile: Dockerfile.dev
+      target: testing
     command: uvicorn src.main:app --host=0.0.0.0 --reload
     ports:
       - '8000:8000'
@@ -12,6 +14,8 @@ services:
       - ./tests:/app/tests/
       - ./alembic:/app/alembic/
       - ./alembic.ini:/app/alembic.ini
+      - ./pytest.ini:/app/pytest.ini
+      - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - ./.env
     networks:

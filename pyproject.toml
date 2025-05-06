@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.15.2",
+    "async-asgi-testclient>=1.4.11",
     "asyncpg>=0.30.0",
     "bcrypt>=4.3.0",
+    "docker>=7.1.0",
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
     "passlib>=1.7.4",
@@ -21,6 +23,6 @@ dependencies = [
     "python-multipart>=0.0.20",
     "redis>=5.2.1",
     "sqlalchemy[asyncio]>=2.0.40",
-    "testcontainers[postgresql,redis]>=4.10.0",
+    "testcontainers>=4.10.0",
     "uvicorn>=0.34.2",
 ]
