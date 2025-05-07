@@ -94,7 +94,7 @@ async def register(
         raise ex
 
     except Exception as ex:
-        if "uq_sellers_company_name" in str(ex):
+        if "uq_providers_name" in str(ex):
             logger.info(ex)
             raise exceptions.DuplicateCompanyNameExc
         logger.exception(ex)

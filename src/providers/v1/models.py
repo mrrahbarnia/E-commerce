@@ -12,7 +12,7 @@ from src.auth.v1.types import UserId, RoleId
 class Provider(Base):
     __tablename__ = "providers"
     __table_args__ = (sa.PrimaryKeyConstraint("id"),)
-    name: so.Mapped[str] = so.mapped_column(sa.String(200))
+    name: so.Mapped[str] = so.mapped_column(sa.String(200), unique=True)
     created_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
     is_active: so.Mapped[bool] = so.mapped_column(default=False)
     id: so.Mapped[types.ProviderId] = so.mapped_column(default=lambda: uuid4())
