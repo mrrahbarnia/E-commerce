@@ -269,3 +269,41 @@ async def test_resend_verification_code_invalid_format(client: AsyncClient):
     )
 
     assert response.status_code == 422  # Pydantic validation error
+
+
+@pytest.mark.asyncio
+async def test_login_success(client: AsyncClient, redis_client: Redis):
+    # Login with correct credentials
+    login_data = {
+        "username": "activate@example.com",  # Using identity_value as username field in OAuth2PasswordRequestForm
+        "password": "strongPass123",
+    }
+
+    response = await client.post("/v1/auth/login/", data=login_data)
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+
+    # Check refresh token in cookies
+    assert "set-cookie" in response.headers
+    cookies = response.headers["set-cookie"]
+    assert "refresh_token=" in cookies
+
+    # # Clean up redis keys (security stamp + refresh token)
+    # keys = await redis_client.keys("security-stamp:*")
+    # keys += await redis_client.keys("*")  # refresh token keys have token as key
+    # for key in keys:
+    #     await redis_client.delete(key)
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_credentials(client: AsyncClient, redis_client: Redis):
+    # Login with correct credentials
+    login_data = {
+        "username": "activate@example.com",  # Using identity_value as username field in OAuth2PasswordRequestForm
+        "password": "strongPass1234",
+    }
+
+    response = await client.post("/v1/auth/login/", data=login_data)
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid credentials."}

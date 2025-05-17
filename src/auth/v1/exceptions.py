@@ -39,8 +39,8 @@ class AccountAlreadyActivatedExc(HTTPException):
 
 class InvalidCredentialsExc(HTTPException):
     def __init__(self) -> None:
-        self.status_code = status.HTTP_404_NOT_FOUND
-        self.detail = "There is no account with the provided info."
+        self.status_code = status.HTTP_401_UNAUTHORIZED
+        self.detail = "Invalid credentials."
 
 
 class AccountNotActiveExc(HTTPException):
