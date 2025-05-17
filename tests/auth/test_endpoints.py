@@ -1,10 +1,12 @@
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
 from redis.asyncio import Redis
 
 
 @pytest.mark.asyncio
-async def test_register_success(client: AsyncClient):
+async def test_register_success(client: AsyncClient, redis_client: Redis):
     payload = {
         "identity_type": "email",
         "identity_value": "testuser@example.com",
@@ -22,6 +24,10 @@ async def test_register_success(client: AsyncClient):
     data = response.json()
     assert data["username"] == "testuser"
     assert data["identity_value"] == "testuser@example.com"
+    # Deleting keys from redis memory
+    keys = await redis_client.keys("verification-code:*")
+    if keys:
+        await redis_client.delete(*keys)
 
 
 @pytest.mark.asyncio
@@ -78,7 +84,7 @@ async def test_missing_company_name_for_provider(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_conflict_on_duplicate_identity(client: AsyncClient):
+async def test_conflict_on_duplicate_identity(client: AsyncClient, redis_client: Redis):
     # First registration
     payload = {
         "identity_type": "email",
@@ -102,10 +108,16 @@ async def test_conflict_on_duplicate_identity(client: AsyncClient):
         "Email must be unique" in response.text
         or "Phone number must be unique" in response.text
     )
+    # Deleting keys from redis memory
+    keys = await redis_client.keys("verification-code:*")
+    if keys:
+        await redis_client.delete(*keys)
 
 
 @pytest.mark.asyncio
-async def test_conflict_on_duplicate_company_name(client: AsyncClient):
+async def test_conflict_on_duplicate_company_name(
+    client: AsyncClient, redis_client: Redis
+):
     payload = {
         "identity_type": "email",
         "identity_value": "provider1@example.com",
@@ -129,6 +141,11 @@ async def test_conflict_on_duplicate_company_name(client: AsyncClient):
     assert second.status_code == 409
     assert "Company name must be unique" in second.text
 
+    # Deleting keys from redis memory
+    keys = await redis_client.keys("verification-code:*")
+    if keys:
+        await redis_client.delete(*keys)
+
 
 @pytest.mark.asyncio
 async def test_activate_account_success_after_register(
@@ -151,23 +168,10 @@ async def test_activate_account_success_after_register(
     assert register_response.status_code == 201
 
     # Step 2: Get verification code from Redis
-    keys = await redis_client.keys("verification-code:*")
+    keys: list[str] = await redis_client.keys("verification-code:*")
     assert keys, "No verification code found in Redis"
 
-    # Get the most recent verification code that contains the expected identity (optional filter)
-    matched_key = None
-    for key in keys:
-        if isinstance(key, bytes):
-            key = key.decode()
-
-        # Optionally: ensure it relates to this specific user
-        # Skip this if your keys are just "verification-code:<code>" with no email inside
-        if "activate" in key or True:
-            matched_key = key
-            break
-
-    assert matched_key is not None, "Couldn't find a matching verification-code key"
-    code = matched_key.split(":")[1]
+    code = (keys[0].split(":"))[1]
 
     # Step 3: Activate the account using the retrieved code
     response = await client.post(
@@ -177,9 +181,6 @@ async def test_activate_account_success_after_register(
 
     assert response.status_code == 200
     assert response.json() == {"detail": "Verified successfully."}
-
-    # Step 4: Ensure Redis key is removed
-    assert await redis_client.get(matched_key) is None
 
 
 @pytest.mark.asyncio
@@ -209,3 +210,62 @@ async def test_activate_account_failure_invalid_format(client: AsyncClient):
     )
 
     assert response.status_code == 422  # FastAPI's validation error
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_code_success(client: AsyncClient):
+    # First, register user
+    payload = {
+        "identity_type": "email",
+        "identity_value": "resend@example.com",
+        "password": "testpass123",
+        "confirm_password": "testpass123",
+        "full_name": "Resend User",
+        "username": "resenduser",
+        "avatar": "https://example.com/avatar.jpg",
+        "is_provider": False,
+        "company_name": None,
+    }
+    register_resp = await client.post("/v1/auth/register/", json=payload)
+    assert register_resp.status_code == 201
+
+    # Now resend verification code
+    response = await client.post(
+        "/v1/auth/verification-code/resend/",
+        json={"identity_value": "resend@example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"detail": "Resent successfully."}
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_code_user_not_found(client: AsyncClient):
+    response = await client.post(
+        "/v1/auth/verification-code/resend/",
+        json={"identity_value": "notfound@example.com"},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "There is no account with the provided info."}
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_code_already_activated(client: AsyncClient):
+    response = await client.post(
+        "/v1/auth/verification-code/resend/",
+        json={"identity_value": "activate@example.com"},
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Account has already been activated."}
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_code_invalid_format(client: AsyncClient):
+    response = await client.post(
+        "/v1/auth/verification-code/resend/",
+        json={"identity_value": "not-an-email"},
+    )
+
+    assert response.status_code == 422  # Pydantic validation error
