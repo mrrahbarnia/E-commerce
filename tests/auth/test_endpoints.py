@@ -1,8 +1,8 @@
-from typing import Any
-
 import pytest
 from httpx import AsyncClient
 from redis.asyncio import Redis
+
+from src.auth.v1.utils import encode_refresh_token
 
 
 @pytest.mark.asyncio
@@ -307,3 +307,44 @@ async def test_login_invalid_credentials(client: AsyncClient, redis_client: Redi
     response = await client.post("/v1/auth/login/", data=login_data)
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid credentials."}
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_success(client: AsyncClient, redis_client: Redis):
+    user_id = "123"
+    security_stamp = "stamp123"
+    old_refresh_token = encode_refresh_token(
+        {"user_id": user_id, "security_stamp": security_stamp}
+    )
+
+    await redis_client.set(old_refresh_token, user_id)
+
+    response = await client.post(
+        "/v1/auth/refresh-token/",
+        cookies={"refresh_token": old_refresh_token},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+
+    # check Redis contains new refresh token
+    assert await redis_client.get(data["access_token"]) is None
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_missing_cookie(client: AsyncClient):
+    client.cookies.clear()
+    response = await client.post("/v1/auth/refresh-token/")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Token is invalid."
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_invalid(client: AsyncClient):
+    fake_token = encode_refresh_token({"user_id": "999", "security_stamp": "fake"})
+    response = await client.post(
+        "/v1/auth/refresh-token/",
+        cookies={"refresh_token": fake_token},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Token is invalid."

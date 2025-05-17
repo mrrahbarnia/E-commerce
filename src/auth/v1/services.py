@@ -224,33 +224,45 @@ async def login(
         raise CheckDbConnection
 
 
-async def get_refresh_token(redis: Redis, refresh_token: str) -> schemas.Token:
-    if await get_del_cached_value(redis, refresh_token) is None:
-        raise exceptions.InvalidTokenExc
-    payload = decode_refresh_token(refresh_token)
-    # Generating security stamp, storing it in cache and decoding it into the access token.
-    await set_key_to_cache(
-        redis,
-        f"security-stamp:{payload['user_id']}:{payload['security_stamp']}",
-        str(payload["user_id"]),
-        auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
-    )
-    access_token = utils.encode_access_token(
-        {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
-    )
+async def get_refresh_token(redis: Redis, refresh_token: str | None) -> schemas.Token:
+    try:
+        if (
+            not refresh_token
+            or await get_del_cached_value(redis, refresh_token) is None
+        ):
+            raise exceptions.InvalidTokenExc
+        payload = decode_refresh_token(refresh_token)
+        # Generating security stamp, storing it in cache and decoding it into the access token.
+        await set_key_to_cache(
+            redis,
+            f"security-stamp:{payload['user_id']}:{payload['security_stamp']}",
+            str(payload["user_id"]),
+            auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
+        )
+        access_token = utils.encode_access_token(
+            {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+        )
 
-    # Generating new refresh token and storing it in cache.
-    new_refresh_token = utils.encode_refresh_token(
-        {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
-    )
-    # Whitelisting valid refresh tokens
-    await set_key_to_cache(
-        redis,
-        new_refresh_token,
-        str(payload["user_id"]),
-        auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
-    )
-    return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)
+        # Generating new refresh token and storing it in cache.
+        new_refresh_token = utils.encode_refresh_token(
+            {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+        )
+        # Whitelisting valid refresh tokens
+        await set_key_to_cache(
+            redis,
+            new_refresh_token,
+            str(payload["user_id"]),
+            auth_config.REFRESH_TOKEN_LIFE_TIME_MINUTE * 60,
+        )
+        return schemas.Token(access_token=access_token, refresh_token=new_refresh_token)
+
+    except exceptions.InvalidTokenExc as ex:
+        logger.warning(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
+        raise CheckDbConnection
 
 
 async def logout(redis: Redis, refresh_token: str) -> None:
