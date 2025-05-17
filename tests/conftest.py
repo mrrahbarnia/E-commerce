@@ -45,7 +45,16 @@ app.dependency_overrides[session_maker] = override_get_session
 app.dependency_overrides[redis_conn] = override_redis_conn
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
+async def redis_client() -> AsyncGenerator[redis.Redis, None]:
+    client = redis.Redis.from_url(test_redis_url)
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+@pytest_asyncio.fixture(scope="session")
 async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     engine = create_async_engine(test_postgres_url)
     try:

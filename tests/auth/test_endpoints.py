@@ -1,5 +1,6 @@
 import pytest
 from httpx import AsyncClient
+from redis.asyncio import Redis
 
 
 @pytest.mark.asyncio
@@ -121,11 +122,90 @@ async def test_conflict_on_duplicate_company_name(client: AsyncClient):
     first = await client.post("/v1/auth/register/", json=payload)
     assert first.status_code == 201
 
-    # Second registration - same company name
+    # Second registration - same company name - should raise exc
     payload["identity_value"] = "provider2@example.com"
-    payload["username"] = "providertwo"
-    payload["avatar"] = "https://example.com/pic2.jpg"
 
     second = await client.post("/v1/auth/register/", json=payload)
     assert second.status_code == 409
     assert "Company name must be unique" in second.text
+
+
+@pytest.mark.asyncio
+async def test_activate_account_success_after_register(
+    client: AsyncClient, redis_client: Redis
+):
+    # Step 1: Register the user
+    payload = {
+        "identity_type": "email",
+        "identity_value": "activate@example.com",
+        "password": "strongPass123",
+        "confirm_password": "strongPass123",
+        "full_name": "To Be Activated",
+        "username": "toactivate",
+        "avatar": "https://example.com/avatar.jpg",
+        "is_provider": True,
+        "company_name": "ActivationCo",
+    }
+
+    register_response = await client.post("/v1/auth/register/", json=payload)
+    assert register_response.status_code == 201
+
+    # Step 2: Get verification code from Redis
+    keys = await redis_client.keys("verification-code:*")
+    assert keys, "No verification code found in Redis"
+
+    # Get the most recent verification code that contains the expected identity (optional filter)
+    matched_key = None
+    for key in keys:
+        if isinstance(key, bytes):
+            key = key.decode()
+
+        # Optionally: ensure it relates to this specific user
+        # Skip this if your keys are just "verification-code:<code>" with no email inside
+        if "activate" in key or True:
+            matched_key = key
+            break
+
+    assert matched_key is not None, "Couldn't find a matching verification-code key"
+    code = matched_key.split(":")[1]
+
+    # Step 3: Activate the account using the retrieved code
+    response = await client.post(
+        "/v1/auth/activate-account/",
+        json={"verification_code": code},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"detail": "Verified successfully."}
+
+    # Step 4: Ensure Redis key is removed
+    assert await redis_client.get(matched_key) is None
+
+
+@pytest.mark.asyncio
+async def test_activate_account_failure_expired_or_wrong_code(
+    client: AsyncClient, redis_client: Redis
+):
+    fake_code = "123456"
+    await redis_client.delete(
+        f"verification-code:{fake_code}"
+    )  # Ensure it's not in Redis
+
+    response = await client.post(
+        "/v1/auth/activate-account/",
+        json={"verification_code": fake_code},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Code might expired or invalid."}
+
+
+@pytest.mark.asyncio
+async def test_activate_account_failure_invalid_format(client: AsyncClient):
+    # Send a code that's not 6 digits
+    response = await client.post(
+        "/v1/auth/activate-account/",
+        json={"verification_code": "abc1234"},
+    )
+
+    assert response.status_code == 422  # FastAPI's validation error
