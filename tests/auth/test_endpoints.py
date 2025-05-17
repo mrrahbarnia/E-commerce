@@ -272,7 +272,7 @@ async def test_resend_verification_code_invalid_format(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_login_success(client: AsyncClient, redis_client: Redis):
+async def test_login_success(client: AsyncClient):
     # Login with correct credentials
     login_data = {
         "username": "activate@example.com",  # Using identity_value as username field in OAuth2PasswordRequestForm
@@ -288,12 +288,6 @@ async def test_login_success(client: AsyncClient, redis_client: Redis):
     assert "set-cookie" in response.headers
     cookies = response.headers["set-cookie"]
     assert "refresh_token=" in cookies
-
-    # # Clean up redis keys (security stamp + refresh token)
-    # keys = await redis_client.keys("security-stamp:*")
-    # keys += await redis_client.keys("*")  # refresh token keys have token as key
-    # for key in keys:
-    #     await redis_client.delete(key)
 
 
 @pytest.mark.asyncio
@@ -348,3 +342,20 @@ async def test_refresh_token_invalid(client: AsyncClient):
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Token is invalid."
+
+
+@pytest.mark.asyncio
+async def test_reset_password_success(client: AsyncClient):
+    response = await client.put(
+        "/v1/auth/reset-password/", json={"identity_value": "activate@example.com"}
+    )
+    assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_reset_password_account_not_exists(client: AsyncClient):
+    response = await client.put(
+        "/v1/auth/reset-password/", json={"identity_value": "notexists@example.com"}
+    )
+    assert response.json() == {"detail": "There is no account with the provided info."}
+    assert response.status_code == 404
