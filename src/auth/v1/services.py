@@ -193,12 +193,18 @@ async def login(
                     str(user_id),
                     auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
                 )
-                access_token = utils.encode_access_token(
-                    {"user_id": str(user_id), "security_stamp": security_stamp}
+                access_token = await utils.encode_token(
+                    token_type="access_token",
+                    user_id=user_id,
+                    security_stamp=security_stamp,
+                    role=role,
                 )
 
-                refresh_token = utils.encode_refresh_token(
-                    {"user_id": str(user_id), "security_stamp": security_stamp},
+                refresh_token = await utils.encode_token(
+                    token_type="refresh_token",
+                    user_id=user_id,
+                    security_stamp=security_stamp,
+                    role=role,
                 )
                 # Whitelisting valid refresh tokens
                 await set_key_to_cache(
@@ -239,13 +245,19 @@ async def get_refresh_token(redis: Redis, refresh_token: str | None) -> schemas.
             str(payload["user_id"]),
             auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
         )
-        access_token = utils.encode_access_token(
-            {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+        access_token = await utils.encode_token(
+            token_type="access_token",
+            user_id=payload["user_id"],
+            security_stamp=payload["security_stamp"],
+            role=payload["role"],
         )
 
         # Generating new refresh token and storing it in cache.
-        new_refresh_token = utils.encode_refresh_token(
-            {"user_id": payload["user_id"], "security_stamp": payload["security_stamp"]}
+        new_refresh_token = await utils.encode_token(
+            token_type="refresh_token",
+            user_id=payload["user_id"],
+            security_stamp=payload["security_stamp"],
+            role=payload["role"],
         )
         # Whitelisting valid refresh tokens
         await set_key_to_cache(
@@ -347,18 +359,25 @@ async def change_password(
                 f"security-stamp:{user_id}:*",
             )
             await get_del_cached_value(redis, refresh_token)
-            security_stamp = utils.generate_security_stamp()
+            new_security_stamp = utils.generate_security_stamp()
             await set_key_to_cache(
                 redis,
-                f"security-stamp:{user_id}:{security_stamp}",
+                f"security-stamp:{user_id}:{new_security_stamp}",
                 str(user_id),
                 auth_config.ACCESS_TOKEN_LIFE_TIME_MINUTE * 60,
             )
-            access_token = utils.encode_access_token(
-                {"user_id": str(user_id), "security_stamp": security_stamp}
+            decoded_refresh_token = decode_refresh_token(refresh_token)
+            access_token = await utils.encode_token(
+                token_type="access_token",
+                user_id=user_id,
+                security_stamp=new_security_stamp,
+                role=decoded_refresh_token["role"],
             )
-            refresh_token = utils.encode_refresh_token(
-                {"user_id": str(user_id), "security_stamp": security_stamp}
+            refresh_token = await utils.encode_token(
+                token_type="refresh_token",
+                user_id=user_id,
+                security_stamp=new_security_stamp,
+                role=decoded_refresh_token["role"],
             )
             await set_key_to_cache(
                 redis,

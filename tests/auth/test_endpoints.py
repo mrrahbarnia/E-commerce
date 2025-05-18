@@ -1,8 +1,12 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 from redis.asyncio import Redis
 
-from src.auth.v1.utils import encode_refresh_token
+from src.auth.v1.utils import encode_token
+
+from src.auth.v1.types import UserId, UserRole
 
 
 @pytest.mark.asyncio
@@ -306,8 +310,11 @@ async def test_login_invalid_credentials(client: AsyncClient, redis_client: Redi
 async def test_refresh_token_success(client: AsyncClient, redis_client: Redis):
     user_id = "123"
     security_stamp = "stamp123"
-    old_refresh_token = encode_refresh_token(
-        {"user_id": user_id, "security_stamp": security_stamp}
+    old_refresh_token = await encode_token(
+        token_type="refresh_token",
+        user_id=UserId(uuid4()),
+        security_stamp=security_stamp,
+        role=UserRole.CUSTOMER,
     )
 
     await redis_client.set(old_refresh_token, user_id)
@@ -334,7 +341,12 @@ async def test_refresh_token_missing_cookie(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_refresh_token_invalid(client: AsyncClient):
-    fake_token = encode_refresh_token({"user_id": "999", "security_stamp": "fake"})
+    fake_token = await encode_token(
+        token_type="refresh_token",
+        user_id=UserId(uuid4()),
+        security_stamp="fake",
+        role=UserRole.CUSTOMER,
+    )
     response = await client.post(
         "/v1/auth/refresh-token/",
         cookies={"refresh_token": fake_token},

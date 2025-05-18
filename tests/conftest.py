@@ -80,16 +80,6 @@ async def _db_schema(db_engine: AsyncEngine):
     finally:
         async with db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-    #         await conn.execute(
-    #             sa.text(
-    #                 "TRUNCATE TABLE {} RESTART IDENTITY CASCADE".format(
-    #                     ", ".join(
-    #                         f'"{table.name}"'
-    #                         for table in reversed(Base.metadata.sorted_tables)
-    #                     )
-    #                 )
-    #             )
-    #         )
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -103,20 +93,50 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def create_customer(session_maker_fixture: async_sessionmaker[AsyncSession]):
-    async with session_maker_fixture.begin() as session:
-        await create_user(
-            session,
-            identity_value="customer@gmail.com",
-            username="customer",
-            full_name="customer",
-            password="12345678",
-            role=UserRole.CUSTOMER,
-        )
+async def user_creator(session_maker_fixture: async_sessionmaker[AsyncSession]):
+    async def _create_user(
+        identity_value: str,
+        username: str,
+        full_name: str,
+        password: str,
+        role: UserRole,
+    ):
+        async with session_maker_fixture.begin() as session:
+            await create_user(
+                session,
+                identity_value=identity_value,
+                username=username,
+                full_name=full_name,
+                password=password,
+                role=role,
+            )
+
+    return _create_user
 
 
 @pytest_asyncio.fixture(scope="session")
-async def authenticated_client_as_customer(create_customer):
-    client = await get_authenticated_client("customer@gmail.com", "12345678")
+async def authenticated_client_as_customer(user_creator):
+    identity_value = "customer@gmail.com"
+    username = "customer"
+    full_name = "customer"
+    password = "12345678"
+    role = UserRole.CUSTOMER
+
+    await user_creator(identity_value, username, full_name, password, role)
+    client = await get_authenticated_client(identity_value, password)
+    yield client
+    await client.aclose()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def authenticated_client_as_admin(user_creator):
+    identity_value = "admin@gmail.com"
+    username = "admin"
+    full_name = "admin"
+    password = "12345678"
+    role = UserRole.ADMIN
+
+    await user_creator(identity_value, username, full_name, password, role)
+    client = await get_authenticated_client(identity_value, password)
     yield client
     await client.aclose()

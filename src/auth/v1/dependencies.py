@@ -27,6 +27,7 @@ class TokenPayload(TypedDict):
     user_id: UserId
     is_founder: bool | None
     security_stamp: str
+    role: UserRole
 
 
 def _decode_token(token: str) -> TokenPayload:
