@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
+from tests.utils import create_user, get_authenticated_client
 from src.main import app
 from src.database import Base, session_maker, redis_conn
+from src.auth.v1.types import UserRole
 
 
 @pytest.fixture(scope="session")
@@ -55,6 +57,11 @@ async def redis_client() -> AsyncGenerator[redis.Redis, None]:
 
 
 @pytest_asyncio.fixture(scope="session")
+async def session_maker_fixture() -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(test_engine, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture(scope="session")
 async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     engine = create_async_engine(test_postgres_url)
     try:
@@ -73,6 +80,16 @@ async def _db_schema(db_engine: AsyncEngine):
     finally:
         async with db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
+    #         await conn.execute(
+    #             sa.text(
+    #                 "TRUNCATE TABLE {} RESTART IDENTITY CASCADE".format(
+    #                     ", ".join(
+    #                         f'"{table.name}"'
+    #                         for table in reversed(Base.metadata.sorted_tables)
+    #                     )
+    #                 )
+    #             )
+    #         )
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -83,3 +100,23 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     ) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def create_customer(session_maker_fixture: async_sessionmaker[AsyncSession]):
+    async with session_maker_fixture.begin() as session:
+        await create_user(
+            session,
+            identity_value="customer@gmail.com",
+            username="customer",
+            full_name="customer",
+            password="12345678",
+            role=UserRole.CUSTOMER,
+        )
+
+
+@pytest_asyncio.fixture(scope="session")
+async def authenticated_client_as_customer(create_customer):
+    client = await get_authenticated_client("customer@gmail.com", "12345678")
+    yield client
+    await client.aclose()

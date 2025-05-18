@@ -88,13 +88,12 @@ async def test_conflict_on_duplicate_identity(client: AsyncClient, redis_client:
     # First registration
     payload = {
         "identity_type": "email",
-        "identity_value": "duplicate@example.com",
+        "identity_value": "duplicatef@example.com",
         "password": "pass1234",
         "confirm_password": "pass1234",
         "full_name": "First User",
         "username": "firstuser",
         "avatar": "https://example.com/pic.jpg",
-        "is_provider": False,
     }
 
     first = await client.post("/v1/auth/register/", json=payload)
@@ -359,3 +358,50 @@ async def test_reset_password_account_not_exists(client: AsyncClient):
     )
     assert response.json() == {"detail": "There is no account with the provided info."}
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_old_password(
+    authenticated_client_as_customer: AsyncClient,
+):
+    payload = {
+        "old_password": "123456789",
+        "new_password": "123456789",
+        "confirm_password": "123456789",
+    }
+    response = await authenticated_client_as_customer.put(
+        "/v1/auth/change-password/", json=payload
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Old password is incorrect."}
+
+
+@pytest.mark.asyncio
+async def test_change_password_passwords_dont_match(
+    authenticated_client_as_customer: AsyncClient,
+):
+    payload = {
+        "old_password": "12345678",
+        "new_password": "123456789",
+        "confirm_password": "1234567891",
+    }
+    response = await authenticated_client_as_customer.put(
+        "/v1/auth/change-password/", json=payload
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_change_password_success(
+    authenticated_client_as_customer: AsyncClient,
+):
+    payload = {
+        "old_password": "12345678",
+        "new_password": "123456789",
+        "confirm_password": "123456789",
+    }
+    response = await authenticated_client_as_customer.put(
+        "/v1/auth/change-password/", json=payload
+    )
+    assert response.status_code == 200
+    assert "access_token" in response.text
