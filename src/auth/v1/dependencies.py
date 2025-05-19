@@ -7,14 +7,11 @@ from jwt.exceptions import ExpiredSignatureError, PyJWTError
 from redis.asyncio import Redis
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.database import session_maker, redis_conn
+from src.database import redis_conn
 from src.auth.v1 import exceptions
-from src.auth.v1 import repositories
 from src.auth.v1.config import auth_config
 from src.auth.v1.types import UserId, UserRole
-from src.auth.v1.models import User
 from src.common.repositories import get_value_from_cache
 
 logger = logging.getLogger("auth")
@@ -86,28 +83,9 @@ async def get_user_id(
     return token_data["user_id"]
 
 
-async def get_admin_user(
+async def get_admin_id(
     token_data: Annotated[TokenPayload, Depends(check_security_stamp)],
-    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
-) -> User:
-    async with session_maker.begin() as session:
-        user = await repositories.get_user_by_id(session, token_data["user_id"])
-        if user is None:
-            raise exceptions.InvalidTokenExc
-        if not user.is_active:
-            raise exceptions.AccountNotActiveExc
-        if user.role != UserRole.ADMIN:
-            raise exceptions.UserNotAdminExc
-        return user
-
-
-# async def get_current_active_founder(data: Annotated[TokenPayload, Depends(decode_access_token)]) -> bool:
-#     if "user_id" not in data:
-#         raise exceptions.InvalidTokenExc
-#     user_id = data.get("user_id")
-#     assert user_id is not None
-#     async with session_maker.begin() as session:
-#         user = await repositories.get_user_by_id(session, user_id)
-#         if user is None:
-#             raise exceptions.InvalidTokenExc
-#         return user.is_founder
+) -> UserId:
+    if token_data["role"] != UserRole.ADMIN:
+        raise exceptions.OnlyAdminCanAccessExc
+    return token_data["user_id"]

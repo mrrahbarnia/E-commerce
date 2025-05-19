@@ -115,15 +115,3 @@ class ChangePasswordOut(BaseModel):
         }
     )
     access_token: str
-
-
-# class UsersOut(BaseModel):
-#     id: types.UserId
-#     username: str
-#     identity_value: str
-#     role: types.UserRole
-#     is_active: bool
-#     registered_at: str
-#     permissions: list[str]
-#     company_name: str
-#     is_founder: bool

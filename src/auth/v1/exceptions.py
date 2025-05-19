@@ -73,7 +73,7 @@ class SecurityStampChangedExc(HTTPException):
         self.detail = "Security stamp changed,login again."
 
 
-class UserNotAdminExc(HTTPException):
+class OnlyAdminCanAccessExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_403_FORBIDDEN
         self.detail = "Only admin users can access this resource."
