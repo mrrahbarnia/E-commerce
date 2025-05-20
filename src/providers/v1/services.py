@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.providers.v1 import exceptions
 from src.providers.v1 import repositories
 
-# from src.providers.v1 import types
+from src.providers.v1 import types
 from src.common.exceptions import CheckDbConnection
 from src.auth.v1.types import UserId, UserRole
 # from src.auth.v1 import repositories as auth_repositories
@@ -49,4 +49,39 @@ async def invite_staff(
             logger.info(ex)
             raise exceptions.ProviderAlreadyInviteUserExc
         logger.error(ex)
+        raise CheckDbConnection
+
+
+async def lookup_for_staff(
+    session_maker: async_sessionmaker[AsyncSession], invitation_code: str
+) -> types.LookupForStaffReturnType:
+    try:
+        async with session_maker.begin() as session:
+            user_info = await repositories.get_user_by_invitation_code(
+                session, invitation_code
+            )
+            if user_info is None:
+                raise exceptions.UserNotFoundExc
+            role, user_id, full_name, username, avatar = user_info
+            if role == UserRole.ADMIN:
+                raise exceptions.CannotLookupForAdminsExc
+
+            return {
+                "user_role": role,
+                "user_id": user_id,
+                "avatar": avatar,
+                "full_name": full_name,
+                "username": username,
+            }
+
+    except exceptions.UserNotFoundExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except exceptions.CannotLookupForAdminsExc as ex:
+        logger.info(ex)
+        raise ex
+
+    except Exception as ex:
+        logger.warning(ex)
         raise CheckDbConnection

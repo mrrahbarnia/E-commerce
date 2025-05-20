@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.database import session_maker
 from src.providers.v1 import services
+from src.providers.v1 import schemas
 from src.auth.v1.types import UserId
 from src.auth.v1.models import User
 from src.auth.v1.dependencies import get_provider_id
@@ -61,4 +62,41 @@ async def invite_staff(
     inviter_id: Annotated[UserId, Depends(get_provider_id)],
     user_id: UserId,
 ) -> None:
+    """
+    Founders and hiring managers can add staff to their companies.
+    """
     await services.invite_staff(session_maker, inviter_id, user_id)
+
+
+@router.get(
+    "/lookup-staff/{invitation_code}/",
+    status_code=status.HTTP_200_OK,
+    response_model=schemas.LookupForStaffOut,
+    responses={
+        404: {
+            "content": {
+                "application/json": {"example": {"detail": "Account not found."}}
+            }
+        },
+        403: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Cannot lookup for admin users."}
+                }
+            }
+        },
+        500: {
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Check database connection."}
+                }
+            }
+        },
+    },
+)
+async def lookup_for_staff(
+    session_maker: Annotated[async_sessionmaker[AsyncSession], Depends(session_maker)],
+    inviter_id: Annotated[UserId, Depends(get_provider_id)],
+    invitation_code: str,
+):
+    return await services.lookup_for_staff(session_maker, invitation_code)

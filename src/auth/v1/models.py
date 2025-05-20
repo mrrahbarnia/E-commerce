@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from src.database import Base
 from src.auth.v1 import types
+from src.auth.v1.utils import generate_random_code
 from src.providers.v1.types import ProviderId
 
 
@@ -15,6 +16,9 @@ class User(Base):
     role: so.Mapped[types.UserRole] = so.mapped_column(sa.Enum(types.UserRole))
     registered_at: so.Mapped[datetime] = so.mapped_column(server_default=sa.func.now())
     hashed_password: so.Mapped[str] = so.mapped_column(sa.String(250))
+    invitation_code: so.Mapped[str] = so.mapped_column(
+        default=lambda: generate_random_code(8), unique=True
+    )
     is_active: so.Mapped[bool] = so.mapped_column(default=False)
     id: so.Mapped[types.UserId] = so.mapped_column(default=lambda: uuid4())
 

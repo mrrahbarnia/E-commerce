@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.providers.v1 import models
 from src.providers.v1 import types
 from src.auth.v1.types import UserId, UserRole
-from src.auth.v1.models import User
+from src.auth.v1.models import User, UserIdentity
 
 logger = logging.getLogger("sellers")
 
@@ -79,3 +79,33 @@ async def invitate_user(
         ),
     )
     await db_session.execute(smtm)
+
+
+async def get_user_by_invitation_code(
+    db_session: AsyncSession, invitation_code: str
+) -> tuple[UserRole, UserId, str, str, str] | None:
+    # SELECT
+    #     u.role,
+    #     ui.user_id,
+    #     ui.full_name,
+    #     ui.avatar,
+    #     ui.username
+    # FROM users u
+    # JOIN user_identities ui ON u.id=ui.user_id AND u.invitation_code='32582432'
+    smtm = (
+        sa.select(
+            User.role,
+            UserIdentity.user_id,
+            UserIdentity.full_name,
+            UserIdentity.username,
+            UserIdentity.avatar,
+        )
+        .select_from(User)
+        .join(
+            UserIdentity,
+            sa.and_(
+                User.id == UserIdentity.user_id, User.invitation_code == invitation_code
+            ),
+        )
+    )
+    return (await db_session.execute(smtm)).tuples().first()
