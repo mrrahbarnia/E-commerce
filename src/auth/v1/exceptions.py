@@ -77,3 +77,9 @@ class OnlyAdminCanAccessExc(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_403_FORBIDDEN
         self.detail = "Only admin users can access this resource."
+
+
+class OnlyProviderCanAccessExc(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_403_FORBIDDEN
+        self.detail = "Only provider users can access this resource."

@@ -89,3 +89,11 @@ async def get_admin_id(
     if token_data["role"] != UserRole.ADMIN:
         raise exceptions.OnlyAdminCanAccessExc
     return token_data["user_id"]
+
+
+async def get_provider_id(
+    token_data: Annotated[TokenPayload, Depends(check_security_stamp)],
+) -> UserId:
+    if token_data["role"] != UserRole.PROVIDER:
+        raise exceptions.OnlyProviderCanAccessExc
+    return token_data["user_id"]

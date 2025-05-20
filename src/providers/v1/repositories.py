@@ -38,7 +38,7 @@ async def create_provider(
     return await db_session.scalar(smtm)
 
 
-async def check_staff_status_before_invitation(
+async def check_user_status_before_invitation(
     db_session: AsyncSession, user_id: UserId
 ) -> tuple[bool, UserRole, types.InvitationStatus] | None:
     # SELECT u.is_active, u.role, si.status
@@ -59,15 +59,23 @@ async def check_staff_status_before_invitation(
     return (await db_session.execute(smtm)).tuples().first()
 
 
-# async def create_staff_invitation(
-#     db_session: AsyncSession,
-#     user_id: UserId,
-#     seller_id: types.SellerId,
-# ) -> None:
-#     smtm = sa.insert(models.StaffInvitation).values(
-#         {
-#             models.StaffInvitation.user_id: user_id,
-#             models.StaffInvitation.seller_id: seller_id,
-#         }
-#     )
-#     await db_session.execute(smtm)
+async def invitate_user(
+    db_session: AsyncSession,
+    user_id: UserId,
+    inviter_id: UserId,
+) -> None:
+    # INSERT INTO provider_invitations(user_id, provider_id, sent_at, status)
+    # SELECT
+    #     'ac146686-b4f7-4b53-9536-6331bb9b1484'::UUID,
+    #     provider_id,
+    #     '2000-02-02'::DATE,
+    #     'PENDING'
+    # FROM provider_staff
+    # WHERE user_id='a712fd8f-7950-491b-bab4-b82ab23a8a6a'::UUID
+    smtm = sa.insert(models.ProviderInvitation).from_select(
+        [models.ProviderInvitation.user_id, models.ProviderInvitation.provider_id],
+        sa.select(sa.literal(user_id), models.ProviderStaff.provider_id).where(
+            models.ProviderStaff.user_id == inviter_id
+        ),
+    )
+    await db_session.execute(smtm)

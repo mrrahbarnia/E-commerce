@@ -22,6 +22,7 @@ class ProviderStaff(Base):
     __tablename__ = "provider_staff"
     __table_args__ = (
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "provider_id", name="uq_user_id_provider_id"),
         sa.CheckConstraint(
             "NOT (is_founder = true AND is_active = false)",
             name="founder_must_be_active",

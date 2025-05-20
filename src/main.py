@@ -25,6 +25,6 @@ app = FastAPI(**app_configs, lifespan=lifespan)
 
 app.include_router(router=auth_router_v1.router, prefix="/v1/auth", tags=["auth"])
 app.include_router(router=admin_router_v1.router, prefix="/v1/admin", tags=["admin"])
-# app.include_router(
-#     router=sellers_router_v1.router, prefix="/v1/providers", tags=["providers"]
-# )
+app.include_router(
+    router=providers_router_v1.router, prefix="/v1/providers", tags=["providers"]
+)

@@ -10,3 +10,11 @@ CHECK (
 
 
 *** Rotate refresh tokens every 3 months ***
+
+
+// Provider teams
+Hiring manager
+Permissions = {
+  "name": "Hiring manager",
+  "description": "This role is responsible for inviting staff into company."
+}
